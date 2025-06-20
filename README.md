@@ -67,14 +67,6 @@ O shell do EXT2_FileManager suporta os seguintes comandos:
 - `print [superblock|groups|inode|rootdir|dir|inodebitmap|blockbitmap|attr|block]`  
   Exibe informações detalhadas sobre as estruturas internas do EXT2.
 
-## Limitações
-
-- Não suporta arquivos que utilizam ponteiros triplamente indiretos.
-- Escrita em diretórios limitada ao tamanho do bloco.
-- Leitura de diretórios apenas com ponteiros diretos.
-- Não implementa journaling (EXT2 não possui).
-- Operações de cópia são restritas a arquivos (não diretórios).
-
 ## Compilação e Execução
 
 Para compilar:
