@@ -38,6 +38,23 @@ void shell(FileSystemManager *fsm)
           fsm->superblock_info();
         }
 
+        else if (!std::strcmp(first_argument.c_str(), "groups"))
+        {
+          for (int i = 0; i < 8; i++)
+          {
+            cout << "Block Group Descriptor " << i << ":" << endl;
+            fsm->blocks_group_descriptor_info(i);
+            cout << endl;
+          }
+        }
+
+        else if (!std::strcmp(first_argument.c_str(), "group"))
+        {
+          int bgd_index = std::stoi(second_argument);
+          cout << "Block Group Descriptor " << bgd_index << ":" << endl;
+          fsm->blocks_group_descriptor_info(bgd_index);
+        }
+
         else
           throw new Error("invalid syntax.");
       }
