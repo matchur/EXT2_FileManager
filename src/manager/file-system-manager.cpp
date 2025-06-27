@@ -1,5 +1,6 @@
 #include "../superblock/superblock.hpp"
 #include "file-system-manager.hpp"
+#include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -7,6 +8,7 @@ using namespace std;
 FileSystemManager::FileSystemManager(FILE *image){
   this->image = image;
   this->superblock = read_ext2_superblock(this->image);
+  this->bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(0));
 }
 
 void FileSystemManager::info(){
@@ -28,4 +30,10 @@ void FileSystemManager::info(){
 
 void FileSystemManager::superblock_info(){
   print_superblock(this->superblock);
+}
+
+void FileSystemManager::blocks_group_descriptor_info(int index) {
+  uint32_t address = block_group_descriptor_address(index);
+  BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, address);
+  print_blocks_group_descriptor(bgd);
 }
