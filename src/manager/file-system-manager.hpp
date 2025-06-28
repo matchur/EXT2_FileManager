@@ -14,4 +14,5 @@ public:
   void info(); // imprime dados do sistema de arquivos
   void superblock_info(); //imprime dados do superbloco
   void blocks_group_descriptor_info(int index); // imprime dados do descritor de grupo de índice especificado
+  void inode_info(unsigned int inode); // imprime dados do inode
 };
