@@ -27,6 +27,11 @@ void shell(FileSystemManager *fsm)
         fsm->info();
       }
 
+      else if (!std::strcmp(operation.c_str(), "cat")){
+        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
+        fsm->cat(argument.c_str());
+      }
+
       else if (!std::strcmp(operation.c_str(), "print"))
       {
         std::string first_argument = argument.substr(0, argument.find(" "));

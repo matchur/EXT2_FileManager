@@ -2,6 +2,7 @@
 #include "file-system-manager.hpp"
 #include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
 #include "../inode/inode.hpp"
+#include "../error/error.hpp"
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -10,6 +11,9 @@ FileSystemManager::FileSystemManager(FILE *image){
   this->image = image;
   this->superblock = read_ext2_superblock(this->image);
   this->bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(0));
+  Inode* first_inode = read_inode(this->image, this->bgd, 2);
+  vector<Directory> directories = read_directories(this->image, first_inode);
+  this->navigation.push_back(directories.at(0));
 }
 
 void FileSystemManager::info(){
@@ -44,4 +48,21 @@ void FileSystemManager::inode_info(unsigned int inode) {
   BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
   Inode *found_inode = read_inode(this->image, bgd, inode_order(this->superblock, inode));
   print_inode(found_inode);
+}
+
+void FileSystemManager::cat(const char *directory_name) {
+
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+
+  Directory *directory = search_directory(this->image, actual_inode, directory_name);
+
+  if(!directory) throw new Error("file not found.");
+  if(directory->file_type != 1) throw new Error("it's not a file.");
+
+  unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, directory->inode);
+  BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+
+  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
+  print_inode_blocks_content(this->image, directory_inode);
 }
