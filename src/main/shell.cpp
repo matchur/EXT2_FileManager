@@ -55,6 +55,12 @@ void shell(FileSystemManager *fsm)
           fsm->blocks_group_descriptor_info(bgd_index);
         }
 
+        if (!std::strcmp(first_argument.c_str(), "inode"))
+        {
+          int inode = std::stoi(second_argument);
+          fsm->inode_info(inode);
+        }
+
         else
           throw new Error("invalid syntax.");
       }

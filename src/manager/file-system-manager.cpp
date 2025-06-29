@@ -1,6 +1,7 @@
 #include "../superblock/superblock.hpp"
 #include "file-system-manager.hpp"
 #include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
+#include "../inode/inode.hpp"
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -36,4 +37,11 @@ void FileSystemManager::blocks_group_descriptor_info(int index) {
   uint32_t address = block_group_descriptor_address(index);
   BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, address);
   print_blocks_group_descriptor(bgd);
+}
+
+void FileSystemManager::inode_info(unsigned int inode) {
+  unsigned int inode_bgd = block_group_from_inode(this->superblock, inode);
+  BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+  Inode *found_inode = read_inode(this->image, bgd, inode_order(this->superblock, inode));
+  print_inode(found_inode);
 }
