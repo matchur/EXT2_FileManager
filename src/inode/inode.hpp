@@ -32,3 +32,4 @@ typedef struct inode
 Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_order); // lê um inode referenciado na tabela de inodes do descritor de grupo
 void print_inode(Inode* inode); // Imprime dados do inode
 unsigned int inode_order(Superblock* superblock, uint32_t inode);// retorna a ordem (cardinalidade) do inode dentro do descritor de grupo
+void print_inode_blocks_content(FILE* image, Inode* inode); // imprime o conteúdo dos blocos de dados do inode
