@@ -36,6 +36,13 @@ void shell(FileSystemManager *fsm)
         fsm->ls();
       }
 
+      else if (!std::strcmp(operation.c_str(), "pwd")){
+        string pwd(fsm->pwd());
+
+        if(pwd.size() > 1)  pwd.pop_back();
+        cout << pwd << endl;
+      }
+
       else if (!std::strcmp(operation.c_str(), "print"))
       {
         std::string first_argument = argument.substr(0, argument.find(" "));
