@@ -19,4 +19,5 @@ public:
   void inode_info(unsigned int inode); // imprime dados do inode
   void cat(const char *directory_name); //exibe o conteúdo de um arquivo no formato texto
   void ls(); //lista os arquivos e diretórios do diretório corrente
+  string pwd(); //exibe o diretório corrente
 };
