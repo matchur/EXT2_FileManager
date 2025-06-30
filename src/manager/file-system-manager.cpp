@@ -66,3 +66,10 @@ void FileSystemManager::cat(const char *directory_name) {
   Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
   print_inode_blocks_content(this->image, directory_inode);
 }
+
+void FileSystemManager::ls() {
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  vector<Directory> directories = read_directories(this->image, actual_inode);
+  print_directories(directories);
+}
