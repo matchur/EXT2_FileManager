@@ -32,6 +32,10 @@ void shell(FileSystemManager *fsm)
         fsm->cat(argument.c_str());
       }
 
+      else if (!std::strcmp(operation.c_str(), "ls")) {
+        fsm->ls();
+      }
+
       else if (!std::strcmp(operation.c_str(), "print"))
       {
         std::string first_argument = argument.substr(0, argument.find(" "));
