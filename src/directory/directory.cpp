@@ -38,7 +38,7 @@ vector<Directory> read_directories(FILE* image, Inode* inode) {
     }
   
     return directories;
-  }
+}
 
 Directory* search_directory(FILE* image, Inode* inode, const char* name){
     Directory* directory = NULL;
@@ -54,9 +54,19 @@ Directory* search_directory(FILE* image, Inode* inode, const char* name){
     }
   
     return directory;
+}
+
+void print_directory(Directory directory){
+  cout <<  directory.name << endl;
+  cout << "inode:\t\t\t" << (unsigned) directory.inode << endl;
+  cout << "record lenght:\t\t" << (unsigned) directory.rec_len << endl;
+  cout << "name lenght:\t\t" << (unsigned) directory.name_len << endl;
+  cout << "file type:\t\t" << (unsigned) directory.file_type << endl;
+}
+
+void print_directories(vector<Directory> directories) {
+  for(vector<Directory>::iterator it = directories.begin(); it != directories.end(); it++){
+    print_directory(*it);
+    cout << endl;
   }
-
-
-
-  
-  
+}
