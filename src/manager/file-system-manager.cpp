@@ -3,6 +3,7 @@
 #include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
 #include "../inode/inode.hpp"
 #include "../error/error.hpp"
+#include <cstring>
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -72,4 +73,16 @@ void FileSystemManager::ls() {
   Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
   vector<Directory> directories = read_directories(this->image, actual_inode);
   print_directories(directories);
+}
+
+string FileSystemManager::pwd() {
+  string str;
+  for (vector<Directory>::iterator i = this->navigation.begin(); i != this->navigation.end(); i++)
+  {
+    if (std::strcmp((*i).name, "."))
+      str = str.append((*i).name);
+    str = str.append("/");
+  }
+
+  return str;
 }
