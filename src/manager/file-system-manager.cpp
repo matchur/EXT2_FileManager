@@ -86,3 +86,35 @@ string FileSystemManager::pwd() {
 
   return str;
 }
+
+void FileSystemManager::cd(const char *directory_name) {
+
+  if (!std::strcmp(directory_name, ".")) {
+    print_directory(this->navigation.back());
+    return;
+  }
+  if (!std::strcmp(directory_name, "..") && this->navigation.size() == 1)
+    throw new Error("no directories to go back.");
+
+  if (!std::strcmp(directory_name, "..")) {
+    this->navigation.pop_back();
+    Directory actual_directory = this->navigation.back();
+    unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, actual_directory.inode);
+    this->bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+    print_directory(this->navigation.back());
+    return;
+  }
+
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  Directory *directory = search_directory(this->image, actual_inode, directory_name);
+
+  if(!directory) throw new Error("directory not found.");
+  if (directory->file_type != 2)  throw new Error("it's not a directory.");
+
+  unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, directory->inode);
+  this->bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+
+  this->navigation.push_back(*directory);
+  print_directory(this->navigation.back());
+}

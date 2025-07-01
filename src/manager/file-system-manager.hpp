@@ -4,6 +4,8 @@
 #include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
 #include "../directory/directory.hpp"
 
+using namespace std;
+
 class FileSystemManager {
 private:
   FILE *image = NULL;
@@ -20,4 +22,5 @@ public:
   void cat(const char *directory_name); //exibe o conteúdo de um arquivo no formato texto
   void ls(); //lista os arquivos e diretórios do diretório corrente
   string pwd(); //exibe o diretório corrente
+  void cd(const char *directory_name); //altera o diretório corrente para o especificado
 };
