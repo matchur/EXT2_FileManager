@@ -3,6 +3,9 @@
 #include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
 #include "../inode/inode.hpp"
 #include "../error/error.hpp"
+#include "../utils/utils.hpp"
+#include <cstring>
+#include <iomanip>
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -65,4 +68,82 @@ void FileSystemManager::cat(const char *directory_name) {
 
   Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
   print_inode_blocks_content(this->image, directory_inode);
+}
+
+void FileSystemManager::ls() {
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  vector<Directory> directories = read_directories(this->image, actual_inode);
+  print_directories(directories);
+}
+
+string FileSystemManager::pwd() {
+  string str;
+  for (vector<Directory>::iterator i = this->navigation.begin(); i != this->navigation.end(); i++)
+  {
+    if (std::strcmp((*i).name, "."))
+      str = str.append((*i).name);
+    str = str.append("/");
+  }
+
+  return str;
+}
+
+void FileSystemManager::cd(const char *directory_name) {
+
+  if (!std::strcmp(directory_name, ".")) {
+    print_directory(this->navigation.back());
+    return;
+  }
+  if (!std::strcmp(directory_name, "..") && this->navigation.size() == 1)
+    throw new Error("no directories to go back.");
+
+  if (!std::strcmp(directory_name, "..")) {
+    this->navigation.pop_back();
+    Directory actual_directory = this->navigation.back();
+    unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, actual_directory.inode);
+    this->bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+    print_directory(this->navigation.back());
+    return;
+  }
+
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  Directory *directory = search_directory(this->image, actual_inode, directory_name);
+
+  if(!directory) throw new Error("directory not found.");
+  if (directory->file_type != 2)  throw new Error("it's not a directory.");
+
+  unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, directory->inode);
+  this->bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+
+  this->navigation.push_back(*directory);
+  print_directory(this->navigation.back());
+}
+
+void FileSystemManager::attr(const char *directory_name){
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+
+  Directory *directory = search_directory(this->image, actual_inode, directory_name);
+
+  if(!directory) throw new Error("not found.");
+
+  unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, directory->inode);
+  BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
+  
+  string permission = get_i_mode_permissions(directory_inode->i_mode); 
+
+  float size_fk = (float) directory_inode->i_size / 1024;
+  float size_fm = (float) directory_inode->i_size / (1024 * 1024);
+
+  cout << "permissions\t" << "uid\t" << "gid\t" << "size\t\t\t" << "modified on\t" << endl;
+  cout << permission << "\t" << (unsigned)directory_inode->i_uid << "\t";
+  cout << (unsigned)directory_inode->i_gid << "\t";
+  if(directory_inode->i_size < 1024) cout << (unsigned) directory_inode->i_size << " bytes";
+  else if(directory_inode->i_size < (1024 * 1024)) cout << setprecision(2) << size_fk << " KiB";
+  else cout << setprecision(2) << size_fm << " MiB  ";
+  cout << "\t\t"; 
+  print_time((unsigned)directory_inode->i_mtime);
 }

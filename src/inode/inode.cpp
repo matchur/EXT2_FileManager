@@ -139,3 +139,30 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
     }
   }
 }
+
+string get_i_mode_permissions(uint32_t i_mode) {
+  string str;
+
+  switch (i_mode & 0xF000) {
+      case 0x4000: str += "d"; break; // directory
+      case 0x8000: str += "f"; break; // regular file
+      default:     str += "-"; break;
+  }
+
+  // user
+  str += (i_mode & 0x0100) ? "r" : "-";
+  str += (i_mode & 0x0080) ? "w" : "-";
+  str += (i_mode & 0x0040) ? "x" : "-";
+
+  // group
+  str += (i_mode & 0x0020) ? "r" : "-";
+  str += (i_mode & 0x0010) ? "w" : "-";
+  str += (i_mode & 0x0008) ? "x" : "-";
+
+  // other
+  str += (i_mode & 0x0004) ? "r" : "-";
+  str += (i_mode & 0x0002) ? "w" : "-";
+  str += (i_mode & 0x0001) ? "x" : "-";
+
+  return str;
+}

@@ -7,7 +7,7 @@
 
 using namespace std;
 /*
-  Estrutura do directory
+  Estrutura do superbloco
   Referência:  https://www.science.smith.edu/~nhowe/262/oldlabs/kernel/ext2_fs.h
 */ 
 typedef struct directory
@@ -24,3 +24,5 @@ Directory* search_directory(FILE* image, Inode* inode, const char* name);
 
 /* realiza a leitura dos diretórios contidos dentro do diretório identificado pelo 'inode' */
 std::vector<Directory> read_directories(FILE* image, Inode* inode);
+void print_directory(Directory directory); // imprime informações úteis do diretório
+void print_directories(vector<Directory> directories); // imprime informações úteis do diretório

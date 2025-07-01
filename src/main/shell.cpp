@@ -27,9 +27,30 @@ void shell(FileSystemManager *fsm)
         fsm->info();
       }
 
+      else if (!std::strcmp(operation.c_str(), "cd")){
+        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
+        fsm->cd(argument.c_str());
+      }
+
       else if (!std::strcmp(operation.c_str(), "cat")){
         if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
         fsm->cat(argument.c_str());
+      }
+
+      else if (!std::strcmp(operation.c_str(), "ls")) {
+        fsm->ls();
+      }
+
+      else if (!std::strcmp(operation.c_str(), "pwd")){
+        string pwd(fsm->pwd());
+
+        if(pwd.size() > 1)  pwd.pop_back();
+        cout << pwd << endl;
+      }
+
+      else if (!std::strcmp(operation.c_str(), "attr"))
+      {
+        fsm->attr(argument.c_str());
       }
 
       else if (!std::strcmp(operation.c_str(), "print"))
