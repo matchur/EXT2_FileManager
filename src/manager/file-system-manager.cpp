@@ -3,7 +3,9 @@
 #include "../blocks-group-descriptor/blocks-group-descriptor.hpp"
 #include "../inode/inode.hpp"
 #include "../error/error.hpp"
+#include "../utils/utils.hpp"
 #include <cstring>
+#include <iomanip>
 #define BLOCK_SIZE 1024
 
 using namespace std;
@@ -117,4 +119,31 @@ void FileSystemManager::cd(const char *directory_name) {
 
   this->navigation.push_back(*directory);
   print_directory(this->navigation.back());
+}
+
+void FileSystemManager::attr(const char *directory_name){
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+
+  Directory *directory = search_directory(this->image, actual_inode, directory_name);
+
+  if(!directory) throw new Error("not found.");
+
+  unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, directory->inode);
+  BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
+  
+  string permission = get_i_mode_permissions(directory_inode->i_mode); 
+
+  float size_fk = (float) directory_inode->i_size / 1024;
+  float size_fm = (float) directory_inode->i_size / (1024 * 1024);
+
+  cout << "permissions\t" << "uid\t" << "gid\t" << "size\t\t\t" << "modified on\t" << endl;
+  cout << permission << "\t" << (unsigned)directory_inode->i_uid << "\t";
+  cout << (unsigned)directory_inode->i_gid << "\t";
+  if(directory_inode->i_size < 1024) cout << (unsigned) directory_inode->i_size << " bytes";
+  else if(directory_inode->i_size < (1024 * 1024)) cout << setprecision(2) << size_fk << " KiB";
+  else cout << setprecision(2) << size_fm << " MiB  ";
+  cout << "\t\t"; 
+  print_time((unsigned)directory_inode->i_mtime);
 }

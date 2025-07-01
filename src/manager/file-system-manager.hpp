@@ -23,4 +23,5 @@ public:
   void ls(); //lista os arquivos e diretórios do diretório corrente
   string pwd(); //exibe o diretório corrente
   void cd(const char *directory_name); //altera o diretório corrente para o especificado
+  void attr(const char *directory_name); // exibe os atributos de um arquivo ou diretório
 };

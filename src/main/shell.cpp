@@ -48,6 +48,11 @@ void shell(FileSystemManager *fsm)
         cout << pwd << endl;
       }
 
+      else if (!std::strcmp(operation.c_str(), "attr"))
+      {
+        fsm->attr(argument.c_str());
+      }
+
       else if (!std::strcmp(operation.c_str(), "print"))
       {
         std::string first_argument = argument.substr(0, argument.find(" "));
