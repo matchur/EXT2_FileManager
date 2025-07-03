@@ -52,5 +52,4 @@ typedef struct superblock
 } Superblock;
 
 void print_superblock(Superblock* superblock); //imprime dados do superbloco
-void write_ext2_superblock(Superblock* superblock, FILE* image); // escreve o superbloco na imagem
 Superblock* read_ext2_superblock(FILE* image); // lê o superbloco do sistema de arquivos e mapeia para Superblock

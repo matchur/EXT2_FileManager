@@ -7,21 +7,22 @@ using namespace std;
 void shell(FileSystemManager *fsm)
 {
   std::string input, operation, argument;
-  std::getline(std::cin, input);
 
   while (1)
   {
     try
     {
-      
-      std::getline(std::cin, input);
+      std::cout << std::endl<< "[ " << fsm->pwd() << " ]>  ";
+      std::getline(std::cin, input); //Lê uma linha completa digitada pelo usuário e armazena em input.
       std::cout << std::endl;
 
+      // Extrai a primeira palavra da entrada (antes do primeiro espaço)
       operation = input.substr(0, input.find(" "));
 
+      //Se houver espaço na entrada, assume que há um argumento
       bool has_argument = (input.find(" ") != std::string::npos);
-      int pos = input.find(" ") + 1;
-      argument = input.substr(pos, input.length() - pos);
+      int pos = input.find(" ") + 1; // Calcula a posição de início do argumento.
+      argument = input.substr(pos, input.length() - pos); // Extrai o argumento completo após o comando.
 
       if (!std::strcmp(operation.c_str(), "info")){
         fsm->info();
@@ -50,6 +51,7 @@ void shell(FileSystemManager *fsm)
 
       else if (!std::strcmp(operation.c_str(), "attr"))
       {
+        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
         fsm->attr(argument.c_str());
       }
 

@@ -12,12 +12,6 @@ Superblock *read_ext2_superblock(FILE *image){
     return superblock;
 }
 
-void write_ext2_superblock(Superblock *superblock, FILE *image)
-{
-    fseek(image, 1024, SEEK_SET); // Move o ponteiro de escrita para o byte 1024
-    fwrite(superblock, 1, sizeof(Superblock), image); // Escreve os dados do superbloco no arquivo de imagem
-}
-
 void print_superblock(Superblock *superblock)
 {
     cout << "inodes count:  " << (unsigned)superblock->s_inodes_count << endl;
