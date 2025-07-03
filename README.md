@@ -2,25 +2,6 @@
 
 EXT2_FileManager é uma ferramenta de linha de comando para manipulação direta de imagens de sistemas de arquivos EXT2 (`.img` ou `.iso`). O projeto permite explorar, modificar e gerenciar arquivos e diretórios dentro da imagem, simulando operações típicas de um shell Linux, mas atuando diretamente sobre a estrutura EXT2.
 
-## Objetivo
-
-O objetivo do EXT2_FileManager é fornecer uma interface prática para estudo, análise e manipulação de sistemas de arquivos EXT2, permitindo compreender como as operações de alto nível (como criar, remover ou listar arquivos) afetam as estruturas internas do sistema de arquivos.
-
-## Estrutura de Arquivos EXT2
-
-O EXT2 (Second Extended File System) é um sistema de arquivos tradicional do Linux, conhecido por sua simplicidade e eficiência. Ele organiza os dados em blocos e utiliza inodes para armazenar metadados dos arquivos.
-
-Principais componentes manipulados pelo EXT2_FileManager:
-
-- **Superbloco:** Armazena informações globais do sistema de arquivos, como número total de blocos, inodes, tamanho dos blocos, etc.
-- **Group Descriptor Table:** Divide o sistema de arquivos em grupos de blocos, facilitando a alocação e gerenciamento.
-- **Bitmap de blocos e inodes:** Controlam quais blocos e inodes estão livres ou ocupados.
-- **Tabela de inodes:** Cada arquivo ou diretório possui um inode, que armazena permissões, tamanho, ponteiros para blocos de dados, timestamps, entre outros.
-- **Blocos de dados:** Onde o conteúdo real dos arquivos e diretórios é armazenado.
-- **Diretórios:** São arquivos especiais que contêm entradas apontando para outros arquivos ou diretórios, associando nomes a inodes.
-
-O EXT2_FileManager interage diretamente com essas estruturas, permitindo visualizar e modificar o sistema de arquivos em baixo nível.
-
 ## Operações Disponíveis
 
 O shell do EXT2_FileManager suporta os seguintes comandos:
@@ -43,28 +24,7 @@ O shell do EXT2_FileManager suporta os seguintes comandos:
 - `pwd`  
   Mostra o caminho absoluto do diretório corrente.
 
-- `touch <filename>`  
-  Cria um novo arquivo vazio.
-
-- `mkdir <dir>`  
-  Cria um novo diretório vazio.
-
-- `rm <filename>`  
-  Remove um arquivo existente.
-
-- `rmdir <dir>`  
-  Remove um diretório vazio.
-
-- `rename <filename> <newfilename>`  
-  Renomeia um arquivo ou diretório.
-
-- `cp <source_path> <target_path>`  
-  Copia um arquivo entre o sistema de arquivos EXT2 e o sistema de arquivos do host (e vice-versa).
-
-- `echo <filename> text`  
-  Substitui o conteúdo de um arquivo existente pelo texto informado.
-
-- `print [superblock|groups|inode|rootdir|dir|inodebitmap|blockbitmap|attr|block]`  
+- `print [superblock|groups|group <número>|inode <número>]`  
   Exibe informações detalhadas sobre as estruturas internas do EXT2.
 
 ## Compilação e Execução
@@ -76,25 +36,21 @@ make
 
 Para executar:
 ```sh
-./ext2cat <imagem-ext2>
+./ext2
 ```
 
-## Criação de Imagem EXT2
+## Referências
 
-Para criar uma imagem EXT2 para testes:
-```sh
-dd if=/dev/zero of=./myext2image.img bs=1024 count=64K
-mkfs.ext2 -b 1024 ./myext2image.img
-```
+* https://www.science.smith.edu/~nhowe/262/oldlabs/kernel/ext2_fs.h
 
-## Por que estudar a estrutura de arquivos EXT2?
+* https://www.nongnu.org/ext2-doc/ext2.html
 
-Compreender a estrutura de arquivos EXT2 é fundamental para quem deseja aprofundar conhecimentos em sistemas operacionais, recuperação de dados, análise forense e desenvolvimento de ferramentas de baixo nível. Manipular diretamente as estruturas internas (superbloco, inodes, bitmaps) permite visualizar como o sistema operacional organiza, localiza e protege os dados, além de facilitar a identificação de problemas e otimizações.
+* https://docs.kernel.org/filesystems/ext2.html
+
+* http://web.mit.edu/tytso/www/linux/ext2intro.html
 
 ## Autores
 
-- Matheus Vinicius da Costa [@matchur](https://github.com/matchur)
-- Rafael Roseira [@rafaroseira](https://github.com/rafaroseira)
-- Christopher Zai [@Chris-cez](https://github.com/Chris-cez)
-
-
+* Rafael Roseira Machado
+* Matheus Vinicius da Costa
+* Christopher Eduardo Zai
