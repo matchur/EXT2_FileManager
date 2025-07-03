@@ -1,7 +1,7 @@
 all: compile image-restore
 
 compile:
-	g++ ./src/main/main.cpp ./src/main/shell.cpp ./src/file/file-operations.cpp ./src/manager/file-system-manager.cpp ./src/superblock/superblock.cpp ./src/directory/directory.cpp ./src/blocks-group-descriptor/blocks-group-descriptor.cpp ./src/inode/inode.cpp ./src/utils/utils.cpp -o ext2
+	g++ ./src/main/main.cpp ./src/main/shell.cpp ./src/manager/file-system-manager.cpp ./src/superblock/superblock.cpp ./src/blocks-group-descriptor/blocks-group-descriptor.cpp ./src/inode/inode.cpp ./src/directory/directory.cpp ./src/utils/utils.cpp -o ext2
 
 run:
 	./ext2
@@ -19,4 +19,4 @@ mount:
 	ls /mnt
 
 umount:
-	sudo umount /mnt 
+	sudo umount /mnt
