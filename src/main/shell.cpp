@@ -91,6 +91,14 @@ void shell(FileSystemManager *fsm)
           throw new Error("invalid syntax.");
       }
 
+      else if (!std::strcmp(operation.c_str(), "cp")) {
+        std::string first_argument = argument.substr(0, argument.find(" "));
+        int prox = argument.find(" ") + 1;
+        std::string second_argument = argument.substr(prox, argument.length() - prox);
+        if(first_argument.empty() || second_argument.empty())
+            throw new Error("invalid syntax.");
+        fsm->cp(first_argument.c_str(), second_argument.c_str());
+      }
       
       else if (!std::strcmp(operation.c_str(), "exit"))
         exit(0);

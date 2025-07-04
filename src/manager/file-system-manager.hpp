@@ -24,4 +24,5 @@ public:
   string pwd(); //exibe o diretório corrente
   void cd(const char *directory_name); //altera o diretório corrente para o especificado
   void attr(const char *directory_name); // exibe os atributos de um arquivo ou diretório
+  void cp(const char *source_path, const char *target_path); // copia arquivo da imagem para o SO
 };
