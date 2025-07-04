@@ -34,15 +34,15 @@ int get_block_offset(uint32_t block){
   return BASE_OFFSET + (block - 1) * BLOCK_SIZE;
 }
 
-Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_order) {
+Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_relative_position) {
   Inode *inode = (Inode *)malloc(sizeof(Inode));
-  int inode_position =  get_block_offset(bgd->bg_inode_table) + ((inode_order - 1) * sizeof(Inode));
+  int inode_position =  get_block_offset(bgd->bg_inode_table) + ((inode_relative_position - 1) * sizeof(Inode));
   fseek(image, inode_position, SEEK_SET);
   fread(inode, 1, sizeof(Inode), image);
   return inode;
 }
 
-unsigned int inode_order(Superblock *superblock, uint32_t inode) {
+unsigned int inode_relative_position(Superblock *superblock, uint32_t inode) {
   return (unsigned int)inode % superblock->s_inodes_per_group;
 }
 
@@ -73,11 +73,15 @@ bool _print_array_of_blocks(FILE *image, uint32_t *indexes, int qtd_indexes, uns
 
     cout << content;
 
-    if (exit) return false;
+    if (exit) {
+      free(content);
+      return false;
+    }
     (*bytes_to_read) -= 1024;
     (*blocks_read)++;
   }
 
+  free(content);
   return true;
 }
 
@@ -94,15 +98,23 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
   uint32_t *indexes_level_3 = (uint32_t *)malloc(sizeof(uint32_t) * 256);
 
   /* impressão niveis de acesso direto */
-  if (!_print_array_of_blocks(image, inode->i_block, 12, &bytes_to_read, &blocks_read, inode->i_size))
+  if (!_print_array_of_blocks(image, inode->i_block, 12, &bytes_to_read, &blocks_read, inode->i_size)) {
+    free(indexes_level_1);
+    free(indexes_level_2);
+    free(indexes_level_3);
     return;
+  }
 
   /* impressão niveis simples de indexes */
   position = get_block_offset((inode->i_block)[12]);
   fseek(image, position, SEEK_SET);
   fread(indexes_level_1, 1, BLOCK_SIZE, image);
-  if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size))
+  if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
+    free(indexes_level_1);
+    free(indexes_level_2);
+    free(indexes_level_3);
     return;
+  }
 
   /* impressão niveis duplos de indexes */
   position = get_block_offset((inode->i_block)[13]);
@@ -114,8 +126,12 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
     position = get_block_offset(indexes_level_2[i]);
     fseek(image, position, SEEK_SET);
     fread(indexes_level_1, 1, BLOCK_SIZE, image);
-    if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size))
+    if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
+      free(indexes_level_1);
+      free(indexes_level_2);
+      free(indexes_level_3);
       return;
+    }
   }
 
   /* impressão niveis triplos de indexes */
@@ -134,10 +150,18 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
       position = get_block_offset(indexes_level_2[j]);
       fseek(image, position, SEEK_SET);
       fread(indexes_level_1, 1, BLOCK_SIZE, image);
-      if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size))
+      if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
+        free(indexes_level_1);
+        free(indexes_level_2);
+        free(indexes_level_3);
         return;
+      }
     }
   }
+
+  free(indexes_level_1);
+  free(indexes_level_2);
+  free(indexes_level_3);
 }
 
 string get_i_mode_permissions(uint32_t i_mode) {
