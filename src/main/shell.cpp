@@ -12,8 +12,14 @@ void shell(FileSystemManager *fsm)
   {
     try
     {
-      std::cout << std::endl<< "[ " << fsm->pwd() << " ]>  ";
-      std::getline(std::cin, input); //Lê uma linha completa digitada pelo usuário e armazena em input.
+      // Mostra o diretório atual no prompt
+      std::string pwd = fsm->pwd();
+      if (pwd.size() > 1 && pwd.back() == '/')
+        pwd.pop_back();
+      std::cout << "(" << pwd << ")> ";
+
+      std::getline(std::cin, input);
+
       std::cout << std::endl;
 
       // Extrai a primeira palavra da entrada (antes do primeiro espaço)
@@ -40,13 +46,6 @@ void shell(FileSystemManager *fsm)
 
       else if (!std::strcmp(operation.c_str(), "ls")) {
         fsm->ls();
-      }
-
-      else if (!std::strcmp(operation.c_str(), "pwd")){
-        string pwd(fsm->pwd());
-
-        if(pwd.size() > 1)  pwd.pop_back();
-        cout << pwd << endl;
       }
 
       else if (!std::strcmp(operation.c_str(), "attr"))
@@ -93,7 +92,39 @@ void shell(FileSystemManager *fsm)
           throw new Error("invalid syntax.");
       }
 
+      else if (!std::strcmp(operation.c_str(), "cp")) {
+        std::string first_argument = argument.substr(0, argument.find(" "));
+        int prox = argument.find(" ") + 1;
+        std::string second_argument = argument.substr(prox, argument.length() - prox);
+        if(first_argument.empty() || second_argument.empty())
+            throw new Error("invalid syntax.");
+        fsm->cp(first_argument.c_str(), second_argument.c_str());
+      }
       
+      else if (!std::strcmp(operation.c_str(), "touch")) {
+        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        fsm->touch(argument.c_str());
+      }
+      else if (!std::strcmp(operation.c_str(), "rm")) {
+        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        fsm->rm(argument.c_str());
+      }
+      else if (!std::strcmp(operation.c_str(), "rename")) {
+        std::string first_argument = argument.substr(0, argument.find(" "));
+        int prox = argument.find(" ") + 1;
+        std::string second_argument = argument.substr(prox, argument.length() - prox);
+        if(first_argument.empty() || second_argument.empty())
+            throw new Error("invalid syntax.");
+        fsm->rename(first_argument.c_str(), second_argument.c_str());
+      }
+      else if (!std::strcmp(operation.c_str(), "mkdir")) {
+        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        fsm->mkdir(argument.c_str());
+      }
+      else if (!std::strcmp(operation.c_str(), "rmdir")) {
+        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        fsm->rmdir(argument.c_str());
+      }
       else if (!std::strcmp(operation.c_str(), "exit"))
         exit(0);
 
@@ -103,6 +134,7 @@ void shell(FileSystemManager *fsm)
     catch (Error *error)
     {
       std::cout << error->message << endl;
+      delete error;
     }
   }
 }

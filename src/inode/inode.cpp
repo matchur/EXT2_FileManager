@@ -71,11 +71,15 @@ bool _print_array_of_blocks(FILE *image, uint32_t *indexes, int qtd_indexes, uns
 
     cout << content;
 
-    if (exit) return false;
+    if (exit) {
+      free(content);
+      return false;
+    }
     (*bytes_to_read) -= 1024;
     (*blocks_read)++;
   }
 
+  free(content);
   return true;
 }
 
@@ -92,16 +96,24 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
   uint32_t *indexes_level_2 = (uint32_t *)malloc(sizeof(uint32_t) * 256);
   uint32_t *indexes_level_3 = (uint32_t *)malloc(sizeof(uint32_t) * 256);
 
-  // Primeiro processa os blocos diretos (12 primeiros)
-  if (!_print_array_of_blocks(image, inode->i_block, 12, &bytes_to_read, &blocks_read, inode->i_size))
+  /* impressão niveis de acesso direto */
+  if (!_print_array_of_blocks(image, inode->i_block, 12, &bytes_to_read, &blocks_read, inode->i_size)) {
+    free(indexes_level_1);
+    free(indexes_level_2);
+    free(indexes_level_3);
     return;
+  }
 
    // Processa blocos indiretos simples (nível 1)
   position = get_block_offset((inode->i_block)[12], BASE_OFFSET, BLOCK_SIZE);
   fseek(image, position, SEEK_SET);
   fread(indexes_level_1, 1, BLOCK_SIZE, image);
-  if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size))
+  if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
+    free(indexes_level_1);
+    free(indexes_level_2);
+    free(indexes_level_3);
     return;
+  }
 
   // Processa blocos indiretos duplos (nível 2)
   position = get_block_offset((inode->i_block)[13], BASE_OFFSET, BLOCK_SIZE);
@@ -113,8 +125,12 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
     position = get_block_offset(indexes_level_2[i], BASE_OFFSET, BLOCK_SIZE);
     fseek(image, position, SEEK_SET);
     fread(indexes_level_1, 1, BLOCK_SIZE, image);
-    if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size))
+    if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
+      free(indexes_level_1);
+      free(indexes_level_2);
+      free(indexes_level_3);
       return;
+    }
   }
 
   // Processa blocos indiretos triplos (nível 3) 
@@ -133,10 +149,18 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
       position = get_block_offset(indexes_level_2[j], BASE_OFFSET, BLOCK_SIZE);
       fseek(image, position, SEEK_SET);
       fread(indexes_level_1, 1, BLOCK_SIZE, image);
-      if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size))
+      if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
+        free(indexes_level_1);
+        free(indexes_level_2);
+        free(indexes_level_3);
         return;
+      }
     }
   }
+
+  free(indexes_level_1);
+  free(indexes_level_2);
+  free(indexes_level_3);
 }
 
 string get_i_mode_permissions(uint32_t i_mode) {
