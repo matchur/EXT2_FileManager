@@ -20,7 +20,6 @@ typedef struct blocks_group_descriptor {
 
 BlocksGroupDescriptor *read_blocks_group_descriptor(FILE *image, uint32_t position); // lê e retorna um descritor de grupo da imagem
 void print_blocks_group_descriptor(BlocksGroupDescriptor* bgd); // imprime dados do descritor de grupo 
-unsigned int block_group_descriptor_from_inode(Superblock* superblock, unsigned int inode);// retorna o endereço absoluto do descritor de grupo na imagem
 uint32_t block_group_descriptor_address(int bgd_index); // retorna o endereço do descritor de grupo na imagem
 unsigned int block_group_from_inode(Superblock* superblock, unsigned int inode); // retorna o índice do descritor de grupo ao qual o 'inode' pertence
 void write_blocks_group_descriptor(BlocksGroupDescriptor* bgd , FILE *image, uint32_t position); //escreve o descritor de grupo na imagem em uma posição posição
