@@ -11,3 +11,15 @@ void print_time(unsigned int timestamp) { // imprime no formato DD/MM/AAAA HH:MM
     strftime(buffer, 20, "%d/%m/%Y %H:%M", timeinfo);
     std::cout << buffer << std::endl;
 }
+
+int get_block_offset(uint32_t block, int base_offset, int block_size){
+    return base_offset + (block - 1) * block_size;
+}
+
+FILE *get_file(const char *ptr)
+{
+  FILE *file = fopen(ptr, "rb+");
+  if (file == NULL) cout << "\nFile " << ptr << " is not valid"  << endl;
+  else  cout << "\nFile " << ptr << " read" << endl;
+  return file;
+}

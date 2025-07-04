@@ -15,15 +15,15 @@ void print_blocks_group_descriptor(BlocksGroupDescriptor* bgd) {
 // Lê um descritor de grupo de blocos da imagem EXT2 e retorna um ponteiro alocado dinamicamente
 // O ponteiro retornado deve ser liberado com free após o uso
 BlocksGroupDescriptor *read_blocks_group_descriptor(FILE *image, uint32_t position) {
-    BlocksGroupDescriptor *bgd = (BlocksGroupDescriptor *)malloc(sizeof(BlocksGroupDescriptor));
-    fseek(image, position, SEEK_SET);
-    fread(bgd, 1, sizeof(BlocksGroupDescriptor), image);
-    return bgd;
+  BlocksGroupDescriptor *bgd = (BlocksGroupDescriptor *)malloc(sizeof(BlocksGroupDescriptor)); // aloca memória para um bgd
+  fseek(image, position, SEEK_SET); //posiciona o ponteiro no offset onde o bgd está localizado
+  fread(bgd, 1, sizeof(BlocksGroupDescriptor), image); //copia os bytes do bgd para a estrutura em memória
+  return bgd;
 }
 
 // Retorna o endereço do descritor de grupo de blocos de acordo com o índice
 uint32_t block_group_descriptor_address(int bgd_index) {
-    return (unsigned int) 2048 + (sizeof(BlocksGroupDescriptor) * (bgd_index));
+    return (unsigned int) 2048 + (sizeof(BlocksGroupDescriptor) * (bgd_index));// localiza onde está localizado o bgd na imagem
 }
 
 // Calcula o grupo de blocos ao qual pertence um determinado inode

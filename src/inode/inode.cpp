@@ -1,4 +1,5 @@
 #include "inode.hpp"
+#include "../utils/utils.hpp"
 #define BLOCK_SIZE 1024
 #define BASE_OFFSET 1024
 
@@ -30,29 +31,26 @@ void print_inode(Inode *inode) {
     cout << "location file fragment:  " << (unsigned)inode->i_faddr << endl;
   }
 
-int get_block_offset(uint32_t block){
-  return BASE_OFFSET + (block - 1) * BLOCK_SIZE;
-}
-
 Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_relative_position) {
-  Inode *inode = (Inode *)malloc(sizeof(Inode));
-  int inode_position =  get_block_offset(bgd->bg_inode_table) + ((inode_relative_position - 1) * sizeof(Inode));
-  fseek(image, inode_position, SEEK_SET);
-  fread(inode, 1, sizeof(Inode), image);
+  Inode *inode = (Inode *)malloc(sizeof(Inode)); //aloca memória para um Inode
+
+  // localiza a tabela de inodes do grupo e soma à posição relativa do inode para obter o offset do inode na tabela
+  int inode_position =  get_block_offset(bgd->bg_inode_table, BASE_OFFSET, BLOCK_SIZE) + ((inode_relative_position - 1) * sizeof(Inode));
+  fseek(image, inode_position, SEEK_SET); //posiciona o ponteiro de leitura no offset encontrado
+  fread(inode, 1, sizeof(Inode), image); // lê os bytes para a estrutura Inode
   return inode;
 }
 
 unsigned int inode_relative_position(Superblock *superblock, uint32_t inode) {
-  return (unsigned int)inode % superblock->s_inodes_per_group;
+  return (unsigned int)inode % superblock->s_inodes_per_group; //operador módulo devolve a posição relativa do inode no grupo
 }
 
-/* retorna a ultima posição da porção de bytes para ler (primeira posição não utilizado com dado util) */
 static unsigned int last_position_of_content_on_block(unsigned int bytes_to_read)
 {
   return bytes_to_read >= BLOCK_SIZE ? BLOCK_SIZE : bytes_to_read;
 }
 
-/* realiza a impressão dos conteudos dos blocos em 'indexes' e informar se existe mais conteudo a ser lido */
+// imprime conteúdos dos blocos em 'indexes' e informa se existe mais conteúdo a ser lido
 bool _print_array_of_blocks(FILE *image, uint32_t *indexes, int qtd_indexes, unsigned int *bytes_to_read, unsigned int *blocks_read, unsigned int total)
 {
   char *content = (char *)malloc(sizeof(char) * (BLOCK_SIZE + 1));
@@ -65,7 +63,7 @@ bool _print_array_of_blocks(FILE *image, uint32_t *indexes, int qtd_indexes, uns
     if ((*bytes_to_read) <= BLOCK_SIZE)
       exit = true;
 
-    position = get_block_offset(indexes[i]);
+    position = get_block_offset(indexes[i], BASE_OFFSET, BLOCK_SIZE);
     fseek(image, position, SEEK_SET);
     fread(content, 1, BLOCK_SIZE, image);
 
@@ -85,7 +83,7 @@ bool _print_array_of_blocks(FILE *image, uint32_t *indexes, int qtd_indexes, uns
   return true;
 }
 
-/* realiza a impressão do conteudo dos blocos de dados do 'inode' */
+// imprime o conteúdo dos blocos de dados do inode
 void print_inode_blocks_content(FILE *image, Inode *inode)
 {
   unsigned int bytes_to_read = inode->i_size;
@@ -93,6 +91,7 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
   bool exit = false;
   int position;
 
+  // Aloca buffers para os níveis indiretos de blocos
   uint32_t *indexes_level_1 = (uint32_t *)malloc(sizeof(uint32_t) * 256);
   uint32_t *indexes_level_2 = (uint32_t *)malloc(sizeof(uint32_t) * 256);
   uint32_t *indexes_level_3 = (uint32_t *)malloc(sizeof(uint32_t) * 256);
@@ -105,8 +104,8 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
     return;
   }
 
-  /* impressão niveis simples de indexes */
-  position = get_block_offset((inode->i_block)[12]);
+   // Processa blocos indiretos simples (nível 1)
+  position = get_block_offset((inode->i_block)[12], BASE_OFFSET, BLOCK_SIZE);
   fseek(image, position, SEEK_SET);
   fread(indexes_level_1, 1, BLOCK_SIZE, image);
   if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
@@ -116,14 +115,14 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
     return;
   }
 
-  /* impressão niveis duplos de indexes */
-  position = get_block_offset((inode->i_block)[13]);
+  // Processa blocos indiretos duplos (nível 2)
+  position = get_block_offset((inode->i_block)[13], BASE_OFFSET, BLOCK_SIZE);
   fseek(image, position, SEEK_SET);
   fread(indexes_level_2, 1, BLOCK_SIZE, image);
 
   for (int i = 0; i < 256; i++)
   {
-    position = get_block_offset(indexes_level_2[i]);
+    position = get_block_offset(indexes_level_2[i], BASE_OFFSET, BLOCK_SIZE);
     fseek(image, position, SEEK_SET);
     fread(indexes_level_1, 1, BLOCK_SIZE, image);
     if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
@@ -134,20 +133,20 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
     }
   }
 
-  /* impressão niveis triplos de indexes */
-  position = get_block_offset((inode->i_block)[14]);
+  // Processa blocos indiretos triplos (nível 3) 
+  position = get_block_offset((inode->i_block)[14], BASE_OFFSET, BLOCK_SIZE);
   fseek(image, position, SEEK_SET);
   fread(indexes_level_3, 1, BLOCK_SIZE, image);
 
   for (int i = 0; i < 256; i++)
   {
-    position = get_block_offset(indexes_level_3[i]);
+    position = get_block_offset(indexes_level_3[i], BASE_OFFSET, BLOCK_SIZE);
     fseek(image, position, SEEK_SET);
     fread(indexes_level_2, 1, BLOCK_SIZE, image);
 
     for (int j = 0; j < 256; j++)
     {
-      position = get_block_offset(indexes_level_2[j]);
+      position = get_block_offset(indexes_level_2[j], BASE_OFFSET, BLOCK_SIZE);
       fseek(image, position, SEEK_SET);
       fread(indexes_level_1, 1, BLOCK_SIZE, image);
       if (!_print_array_of_blocks(image, indexes_level_1, 256, &bytes_to_read, &blocks_read, inode->i_size)) {
@@ -167,23 +166,24 @@ void print_inode_blocks_content(FILE *image, Inode *inode)
 string get_i_mode_permissions(uint32_t i_mode) {
   string str;
 
-  switch (i_mode & 0xF000) {
-      case 0x4000: str += "d"; break; // directory
-      case 0x8000: str += "f"; break; // regular file
-      default:     str += "-"; break;
-  }
+  if (i_mode & (0x4000))
+  str = str.append("d"); // Diretório
+  else if (i_mode & (0x8000))
+    str = str.append("f"); // Arquivo regular
+  else
+    str = str.append("-"); // outro tipo
 
-  // user
+  // Permissões do user
   str += (i_mode & 0x0100) ? "r" : "-";
   str += (i_mode & 0x0080) ? "w" : "-";
   str += (i_mode & 0x0040) ? "x" : "-";
 
-  // group
+  // Permissões do grupo
   str += (i_mode & 0x0020) ? "r" : "-";
   str += (i_mode & 0x0010) ? "w" : "-";
   str += (i_mode & 0x0008) ? "x" : "-";
 
-  // other
+  // Permissões de outros
   str += (i_mode & 0x0004) ? "r" : "-";
   str += (i_mode & 0x0002) ? "w" : "-";
   str += (i_mode & 0x0001) ? "x" : "-";

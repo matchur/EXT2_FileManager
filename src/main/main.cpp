@@ -1,6 +1,7 @@
 #include "shell.hpp"
-#include "../file/file-operations.hpp"
+#include "../utils/utils.hpp"
 #include "../error/error.hpp"
+#include <limits>
 
 int main()
 {
@@ -13,6 +14,7 @@ int main()
         char *input = (char *)malloc(sizeof(char) * 100);
         cout << "enter the iso image:\t";
         cin >> input;
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
         ext2_image = get_file((const char *)input);
         if(ext2_image){
           fsm = new FileSystemManager(ext2_image);

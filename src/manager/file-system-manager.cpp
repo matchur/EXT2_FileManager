@@ -29,14 +29,21 @@ FileSystemManager::FileSystemManager(FILE *image) {
 }
 
 void FileSystemManager::info(){
-  uint32_t group_count = this->superblock->s_blocks_per_group/BLOCK_SIZE;
-  uint32_t inode_table_blocks = this->superblock->s_inodes_per_group/group_count;
+
+  // Total de grupos no sistema
+  uint32_t group_count = this->superblock->s_blocks_count / this->superblock->s_blocks_per_group;
+
+  // Blocos ocupados pela tabela de inodes em cada grupo
+  uint32_t inode_table_blocks = (this->superblock->s_inodes_per_group * this->superblock->s_inode_size) / BLOCK_SIZE;
+
+  // Cálculo do espaço livre (descontando blocos reservados)
+  uint32_t usable_free_blocks = this->superblock->s_free_blocks_count - this->superblock->s_r_blocks_count;
 
   cout << "Volume name.....: " << this->superblock->s_volume_name << endl;
-  cout << "Image size......: " << this->superblock->s_blocks_count << " KiB" << endl;
-  cout << "Free space......: " << this->superblock->s_free_blocks_count << " KiB" << endl;
+  cout << "Image size......: " << (this->superblock->s_blocks_count * BLOCK_SIZE) << " bytes" << endl;
+  cout << "Free space......: " << (usable_free_blocks * BLOCK_SIZE / 1024) << " KiB" << endl;
   cout << "Free inodes.....: " << this->superblock->s_free_inodes_count << endl;
-  cout << "Free blocks.....: " << this->superblock->s_free_blocks_count << endl;
+  cout << "Free blocks.....: " << this->superblock->s_free_blocks_count << " blocks" << endl;
   cout << "Blocks size.....: " << BLOCK_SIZE << " bytes" << endl;
   cout << "Inode size......: " << this->superblock->s_inode_size << " bytes" << endl;
   cout << "Group count.....: " << group_count << endl;
@@ -46,7 +53,7 @@ void FileSystemManager::info(){
 }
 
 void FileSystemManager::superblock_info(){
-  print_superblock(this->superblock);
+  print_superblock(this->superblock); //imprime os campos do superbloco
 }
 
 // Exibe informações do descritor de grupo de índice especificado
@@ -58,9 +65,12 @@ void FileSystemManager::blocks_group_descriptor_info(int index) {
 
 // Exibe informações detalhadas de um inode específico
 void FileSystemManager::inode_info(unsigned int inode) {
-    Inode *node = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, inode));
-    print_inode(node);
-    free(node); // Libera memória alocada
+  unsigned int inode_bgd = block_group_from_inode(this->superblock, inode);//retorna a qual block group o inode pertence
+  BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd)); //lê os bytes do bgd
+  Inode *found_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, inode));//lê o inode
+  print_inode(found_inode);
+  free(node); // Libera memória alocada
+  free(bgd);  // Libera também o bgd alocado
 }
 
 // Exibe o conteúdo de um arquivo no formato texto
@@ -93,27 +103,17 @@ void FileSystemManager::cat(const char *directory_name) {
 // Lista os arquivos e diretórios do diretório corrente
 // Percorre as entradas do diretório atual e imprime informações detalhadas de cada uma.
 void FileSystemManager::ls() {
-    Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
-    uint8_t buffer[BLOCK_SIZE];
-    fseek(this->image, actual_inode->i_block[0] * BLOCK_SIZE, SEEK_SET);
-    fread(buffer, 1, BLOCK_SIZE, this->image);
-    uint32_t offset = 0;
-    while (offset < BLOCK_SIZE) {
-        Directory *entry = (Directory *)(buffer + offset);
-        if (entry->inode != 0) {
-            // Imprime o nome corretamente, mesmo sem \0
-            std::cout.write(entry->name, entry->name_len);
-            std::cout << std::endl;
-            std::cout << "inode:\t\t\t" << entry->inode << std::endl;
-            std::cout << "record lenght:\t\t" << entry->rec_len << std::endl;
-            std::cout << "name lenght:\t\t" << (unsigned)entry->name_len << std::endl;
-            std::cout << "file type:\t\t" << (unsigned)entry->file_type << std::endl;
-            std::cout << std::endl;
-        }
-        offset += entry->rec_len;
-    }
-    free(actual_inode);
+  /*
+    acessa a última entrada no vetor navigation (pilha que armazena o caminho percorrido). 
+  */
+  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
+
+  // lê o inode do diretório atual
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+
+  // lê todas as entradas do diretório (arquivos/subdiretórios)
+  vector<Directory> directories = read_directories(this->image, actual_inode);
+  print_directories(directories);
 }
 
 // Retorna o caminho absoluto do diretório corrente
@@ -469,6 +469,7 @@ void FileSystemManager::rename(const char *old_name, const char *new_name) {
 // Cria um novo diretório no diretório atual
 void FileSystemManager::mkdir(const char *dir_name) {
     // Obtém o diretório atual
+
     Directory actual_directory = this->navigation.back();
     Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
