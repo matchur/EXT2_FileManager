@@ -4,6 +4,7 @@
 #include "../utils/utils.hpp"
 #define BLOCK_SIZE 1024
 #define BASE_OFFSET 1024
+#define BLOCK_OFFSET(block) (BASE_OFFSET + ((block) - 1) * BLOCK_SIZE)
 
 typedef char Block[BLOCK_SIZE];
 

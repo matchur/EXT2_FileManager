@@ -69,7 +69,7 @@ void FileSystemManager::inode_info(unsigned int inode) {
   BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd)); //lê os bytes do bgd
   Inode *found_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, inode));//lê o inode
   print_inode(found_inode);
-  free(node); // Libera memória alocada
+  free(found_inode); // Libera memória alocada
   free(bgd);  // Libera também o bgd alocado
 }
 
