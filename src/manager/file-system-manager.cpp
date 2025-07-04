@@ -56,7 +56,7 @@ void FileSystemManager::blocks_group_descriptor_info(int index) {
 void FileSystemManager::inode_info(unsigned int inode) {
   unsigned int inode_bgd = block_group_from_inode(this->superblock, inode);//retorna a qual block group o inode pertence
   BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd)); //lê os bytes do bgd
-  Inode *found_inode = read_inode(this->image, bgd, inode_order(this->superblock, inode));//lê o inode
+  Inode *found_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, inode));//lê o inode
   print_inode(found_inode);
 }
 
@@ -66,7 +66,7 @@ void FileSystemManager::cat(const char *directory_name) {
   Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
 
   // leitura do inode do diretório atual;
-  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
   // procura o arquivo pelo nome no conteúdo do diretório, retornando uma struct Directory se achar
   Directory *directory = search_directory(this->image, actual_inode, directory_name);
@@ -81,7 +81,7 @@ void FileSystemManager::cat(const char *directory_name) {
   BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
 
   // lê inode do arquivo
-  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
+  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, directory->inode));
 
   // imprime conteúdo
   print_inode_blocks_content(this->image, directory_inode);
@@ -94,7 +94,7 @@ void FileSystemManager::ls() {
   Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
 
   // lê o inode do diretório atual
-  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
   // lê todas as entradas do diretório (arquivos/subdiretórios)
   vector<Directory> directories = read_directories(this->image, actual_inode);
@@ -140,7 +140,7 @@ void FileSystemManager::cd(const char *directory_name) {
   Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
 
   // lê o inode do diretório atual
-  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
   // encontra o diretório de destino no conteúdo do diretório atual.
   Directory *directory = search_directory(this->image, actual_inode, directory_name);
@@ -164,7 +164,7 @@ void FileSystemManager::attr(const char *directory_name){
   Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
 
   // lê inode do diretório atual
-  Inode *actual_inode = read_inode(this->image, this->bgd, inode_order(this->superblock, actual_directory.inode));
+  Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
   // busca pela entrada do arquivo/diretório
   Directory *directory = search_directory(this->image, actual_inode, directory_name);
@@ -178,7 +178,7 @@ void FileSystemManager::attr(const char *directory_name){
   BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
 
   // lê o inode do arquivo/diretório atual
-  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_order(this->superblock, directory->inode));
+  Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, directory->inode));
   
   // imprime atributos
   string permission = get_i_mode_permissions(directory_inode->i_mode); 

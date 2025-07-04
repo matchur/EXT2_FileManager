@@ -31,8 +31,8 @@ typedef struct inode
   uint32_t i_osd2[3];
 } Inode;
 
-Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_order); // lê um inode referenciado na tabela de inodes do descritor de grupo
+Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_relative_position); // lê um inode referenciado na tabela de inodes do descritor de grupo
 void print_inode(Inode* inode); // Imprime dados do inode
-unsigned int inode_order(Superblock* superblock, uint32_t inode);// retorna a posição relativa do inode dentro do seu grupo de blocos
+unsigned int inode_relative_position(Superblock* superblock, uint32_t inode);// retorna a posição relativa do inode dentro do seu grupo de blocos
 void print_inode_blocks_content(FILE* image, Inode* inode); // imprime o conteúdo dos blocos de dados do inode 
 string get_i_mode_permissions(uint32_t i_mode);// exibe informações de permissões e formatos de arquivo de um diretório ou arquivo

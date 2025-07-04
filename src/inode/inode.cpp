@@ -31,17 +31,17 @@ void print_inode(Inode *inode) {
     cout << "location file fragment:  " << (unsigned)inode->i_faddr << endl;
   }
 
-Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_order) {
+Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_relative_position) {
   Inode *inode = (Inode *)malloc(sizeof(Inode)); //aloca memória para um Inode
 
   // localiza a tabela de inodes do grupo e soma à posição relativa do inode para obter o offset do inode na tabela
-  int inode_position =  get_block_offset(bgd->bg_inode_table, BASE_OFFSET, BLOCK_SIZE) + ((inode_order - 1) * sizeof(Inode));
+  int inode_position =  get_block_offset(bgd->bg_inode_table, BASE_OFFSET, BLOCK_SIZE) + ((inode_relative_position - 1) * sizeof(Inode));
   fseek(image, inode_position, SEEK_SET); //posiciona o ponteiro de leitura no offset encontrado
   fread(inode, 1, sizeof(Inode), image); // lê os bytes para a estrutura Inode
   return inode;
 }
 
-unsigned int inode_order(Superblock *superblock, uint32_t inode) {
+unsigned int inode_relative_position(Superblock *superblock, uint32_t inode) {
   return (unsigned int)inode % superblock->s_inodes_per_group; //operador módulo devolve a posição relativa do inode no grupo
 }
 
