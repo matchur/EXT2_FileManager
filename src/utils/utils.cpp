@@ -20,7 +20,7 @@ int get_block_offset(uint32_t block, int base_offset, int block_size){
 FILE *get_file(const char *ptr)
 {
   FILE *file = fopen(ptr, "rb+");
-  if (file == NULL) cout << "\nFile " << ptr << " is not valid"  << endl;
-  else  cout << "\nFile " << ptr << " read" << endl;
+  if (file == NULL) cout << "\nImagem " << ptr << " não é válida"  << endl;
+  else  cout << "\nImagem " << ptr << " lida" << endl;
   return file;
 }

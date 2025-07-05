@@ -36,12 +36,12 @@ void shell(FileSystemManager *fsm)
       }
 
       else if (!strcmp(operation.c_str(), "cd")){
-        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument)  throw new Error("Sintaxe inválida.");
         fsm->cd(argument.c_str());
       }
 
       else if (!strcmp(operation.c_str(), "cat")){
-        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument)  throw new Error("Sintaxe inválida.");
         fsm->cat(argument.c_str());
       }
 
@@ -54,7 +54,7 @@ void shell(FileSystemManager *fsm)
 
       else if (!strcmp(operation.c_str(), "attr"))
       {
-        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument)  throw new Error("Sintaxe inválida.");
         fsm->attr(argument.c_str());
       }
 
@@ -93,7 +93,7 @@ void shell(FileSystemManager *fsm)
         }
 
         else
-          throw new Error("invalid syntax.");
+          throw new Error("Sintaxe inválida.");
       }
 
       else if (!strcmp(operation.c_str(), "cp")) {
@@ -101,16 +101,16 @@ void shell(FileSystemManager *fsm)
         int prox = argument.find(" ") + 1;
         string second_argument = argument.substr(prox, argument.length() - prox);
         if(first_argument.empty() || second_argument.empty())
-            throw new Error("invalid syntax.");
+            throw new Error("Sintaxe inválida.");
         fsm->cp(first_argument.c_str(), second_argument.c_str());
       }
       
       else if (!strcmp(operation.c_str(), "touch")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument) throw new Error("Sintaxe inválida.");
         fsm->touch(argument.c_str());
       }
       else if (!strcmp(operation.c_str(), "rm")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument) throw new Error("Sintaxe inválida.");
         fsm->rm(argument.c_str());
       }
       else if (!strcmp(operation.c_str(), "rename")) {
@@ -118,22 +118,22 @@ void shell(FileSystemManager *fsm)
         int prox = argument.find(" ") + 1;
         string second_argument = argument.substr(prox, argument.length() - prox);
         if(first_argument.empty() || second_argument.empty())
-            throw new Error("invalid syntax.");
+            throw new Error("Sintaxe inválida.");
         fsm->rename(first_argument.c_str(), second_argument.c_str());
       }
       else if (!strcmp(operation.c_str(), "mkdir")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument) throw new Error("Sintaxe inválida.");
         fsm->mkdir(argument.c_str());
       }
       else if (!strcmp(operation.c_str(), "rmdir")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
+        if(argument.size() == 0 || !has_argument) throw new Error("Sintaxe inválida.");
         fsm->rmdir(argument.c_str());
       }
       else if (!strcmp(operation.c_str(), "exit"))
         exit(0);
 
       else
-        throw new Error("command not found");
+        throw new Error("Comando não encontrado.");
     }
     catch (Error *error)
     {
