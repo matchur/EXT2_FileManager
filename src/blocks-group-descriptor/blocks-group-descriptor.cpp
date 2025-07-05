@@ -1,7 +1,6 @@
 #include "blocks-group-descriptor.hpp"
 
-using std::cout;
-using std::endl;
+using namespace std;
 
 // Imprime informações do descritor de grupo de blocos EXT2
 void print_blocks_group_descriptor(BlocksGroupDescriptor* bgd) {
