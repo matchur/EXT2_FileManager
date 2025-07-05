@@ -12,13 +12,13 @@ void print_array(uint32_t *array, int size)
 }
 
 void print_inode(Inode *inode) {
-    cout << "file format and access rights:  " << "0x" << hex << (unsigned)inode->i_mode << dec << endl;
+    cout << "file format and access rights:  " << "0x" << std::hex << (unsigned)inode->i_mode << std::dec << endl;
     cout << "user_id:  " << (unsigned)inode->i_uid << endl;
     cout << "lower 32-bit file size:  " << (unsigned)inode->i_size << endl;
-    cout << "access time:   "; print_time((unsigned)inode->i_atime);
-    cout << "creation time:  "; print_time((unsigned)inode->i_ctime);
-    cout << "modification time:  "; print_time((unsigned)inode->i_mtime);
-    cout << "deletion time:  "; print_time((unsigned)inode->i_dtime);
+    cout << "access time:   " << (unsigned)inode->i_atime << endl;
+    cout << "creation time:  " << (unsigned)inode->i_ctime << endl;
+    cout << "modification time:  " << (unsigned)inode->i_mtime << endl;
+    cout << "deletion time:  " << (unsigned)inode->i_dtime << endl;
     cout << "group id:  " << (unsigned)inode->i_gid << endl;
     cout << "link count inode:  " << (unsigned)inode->i_links_count << endl;
     cout << "512-bytes blocks:  " << (unsigned)inode->i_blocks << endl;
