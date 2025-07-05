@@ -2,15 +2,14 @@
 #include <ctime>
 #include <iostream>
 
-using std::cout;
-using std::endl;
+using namespace std;
 
 void print_time(unsigned int timestamp) { // imprime no formato DD/MM/AAAA HH:MM 
     time_t time = timestamp;
     tm* timeinfo = localtime(&time);
     char buffer[20];
     strftime(buffer, 20, "%d/%m/%Y %H:%M", timeinfo);
-    cout << buffer << endl;
+    std::cout << buffer << std::endl;
 }
 
 int get_block_offset(uint32_t block, int base_offset, int block_size){
@@ -20,7 +19,7 @@ int get_block_offset(uint32_t block, int base_offset, int block_size){
 FILE *get_file(const char *ptr)
 {
   FILE *file = fopen(ptr, "rb+");
-  if (file == NULL) cout << "\nImagem " << ptr << " não é válida"  << endl;
-  else  cout << "\nImagem " << ptr << " lida" << endl;
+  if (file == NULL) cout << "\nFile " << ptr << " is not valid"  << endl;
+  else  cout << "\nFile " << ptr << " read" << endl;
   return file;
 }
