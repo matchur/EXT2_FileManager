@@ -110,16 +110,7 @@ void FileSystemManager::cat(const char *directory_name) {
     unsigned int file_inode_bgd = block_group_from_inode(this->superblock, entry->inode);
     BlocksGroupDescriptor *file_bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(file_inode_bgd));
     Inode *file_inode = read_inode(this->image, file_bgd, inode_relative_position(this->superblock, entry->inode));
-
-    char buffer[BLOCK_SIZE + 1] = {0};
-    for (int i = 0; i < 12 && file_inode->i_block[i] != 0; i++) {
-        fseek(this->image, file_inode->i_block[i] * BLOCK_SIZE, SEEK_SET);
-        fread(buffer, 1, BLOCK_SIZE, this->image);
-        buffer[BLOCK_SIZE] = '\0';
-        cout << buffer;
-    }
-    cout << endl;
-
+    print_inode_blocks_content(this->image, file_inode);
     free(file_inode);
     free(file_bgd);
     free(actual_inode);
