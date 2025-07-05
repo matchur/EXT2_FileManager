@@ -12,7 +12,7 @@ void print_array(uint32_t *array, int size)
 }
 
 void print_inode(Inode *inode) {
-    cout << "file format and access rights:  " << "0x" << std::hex << (unsigned)inode->i_mode << std::dec << endl;
+    cout << "file format and access rights:  " << "0x" << hex << (unsigned)inode->i_mode << dec << endl;
     cout << "user_id:  " << (unsigned)inode->i_uid << endl;
     cout << "lower 32-bit file size:  " << (unsigned)inode->i_size << endl;
     cout << "access time:   " << (unsigned)inode->i_atime << endl;

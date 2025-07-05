@@ -29,7 +29,7 @@ void print_superblock(Superblock *superblock)
     cout << "write time:  " << (unsigned)superblock->s_wtime << endl;
     cout << "mount count:  " << (unsigned)superblock->s_mnt_count << endl;
     cout << "max mount count:  " << (unsigned)superblock->s_max_mnt_count << endl;
-    cout << "magic signature:  " << std::hex << std::uppercase << superblock->s_magic << std::dec << endl;
+    cout << "magic signature:  " << hex << uppercase << superblock->s_magic << dec << endl;
     cout << "file system state:  " << (unsigned)superblock->s_state << endl;
     cout << "errors:  " << (unsigned)superblock->s_errors << endl;
     cout << "minor revision level:  " << (unsigned)superblock->s_minor_rev_level << endl;
