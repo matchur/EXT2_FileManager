@@ -84,20 +84,17 @@ void FileSystemManager::cat(const char *directory_name) {
         free(actual_inode);
         return;
     }
-    unsigned int file_inode_block_group = block_group_from_inode(this->superblock, entry->inode);
-    BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(file_inode_block_group));
-    Inode *file_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, entry->inode));
-    char buffer[BLOCK_SIZE + 1] = {0};
-    for (int i = 0; i < 12 && file_inode->i_block[i] != 0; i++) {
-        fseek(this->image, file_inode->i_block[i] * BLOCK_SIZE, SEEK_SET);
-        fread(buffer, 1, BLOCK_SIZE, this->image);
-        buffer[BLOCK_SIZE] = '\0';
-        std::cout << buffer;
-    }
-    std::cout << std::endl;
-    free(file_inode);      // Libera memória alocada
-    free(bgd_of_inode);    // Libera memória alocada
-    free(actual_inode);    // Libera memória alocada
+
+    // Descobre o grupo do inode do arquivo a ser lido
+    unsigned int file_inode_bgd = block_group_from_inode(this->superblock, entry->inode);
+    BlocksGroupDescriptor *file_bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(file_inode_bgd));
+    Inode *file_inode = read_inode(this->image, file_bgd, inode_relative_position(this->superblock, entry->inode));
+    print_inode_blocks_content(this->image, file_inode);
+    free(file_inode);
+    free(file_bgd);
+    free(actual_inode);
+    free(bgd);
+
 }
 
 // Lista os arquivos e diretórios do diretório corrente
