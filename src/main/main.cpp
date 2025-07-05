@@ -3,34 +3,22 @@
 #include "../error/error.hpp"
 #include <limits>
 
+using std::cout;
+using std::endl;
+
 int main()
 {
-  FILE *ext2_image = NULL;
-  FileSystemManager *fsm;
+    FILE *ext2_image = NULL;
+    FileSystemManager *fsm;
 
-  while(1){
-    try{
-      
-        char *input = (char *)malloc(sizeof(char) * 100);
-        cout << "enter the iso image:\t";
-        cin >> input;
-        cin.ignore(numeric_limits<streamsize>::max(), '\n'); 
-        ext2_image = get_file((const char *)input);
-        if(ext2_image){
-          fsm = new FileSystemManager(ext2_image);
-          shell(fsm);
-        }
-      }
-      catch (const char *str)
-      {
-        cout << str << endl;
-      }
-      catch (Error *error)
-      {
-        cout << endl
-             << "[ error::" << error->message << " ]"<< endl;
-      }
-  }
+    // Abre automaticamente a imagem EXT2_TESTE.img
+    ext2_image = get_file("EXT2_TESTE.img");
+    if (!ext2_image) {
+        cout << "Não foi possível abrir EXT2_TESTE.img" << endl;
+        return 1;
+    }
+    fsm = new FileSystemManager(ext2_image);
+    shell(fsm);
 
-  return 0;
+    return 0;
 }

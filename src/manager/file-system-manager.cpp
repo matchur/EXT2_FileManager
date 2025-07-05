@@ -11,7 +11,8 @@
 #include <sys/stat.h>
 #define BLOCK_SIZE 1024
 
-using namespace std;
+using std::cout;
+using std::endl;
 
 // Construtor da classe FileSystemManager
 // Inicializa o gerenciador de sistema de arquivos carregando o superbloco, descritor de grupo e diretório raiz.
@@ -73,47 +74,69 @@ void FileSystemManager::inode_info(unsigned int inode) {
   free(bgd);  // Libera também o bgd alocado
 }
 
+// Retorna true se o nome for válido para EXT2
+bool is_valid_name(const char* name) {
+    size_t len = strlen(name);
+    if (len == 0 || len > EXT2_NAME_LEN) return false;
+    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) return false;
+    for (size_t i = 0; i < len; ++i) {
+        // Permite apenas letras, números, underline, hífen e ponto
+        if (!(isalnum(name[i]) || name[i] == '_' || name[i] == '-' || name[i] == '.')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Exibe o conteúdo de um arquivo no formato texto
 // Procura o arquivo no diretório atual, lê seu inode e imprime o conteúdo.
 void FileSystemManager::cat(const char *directory_name) {
     Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+
+    // Descobre o grupo do inode do diretório atual
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
+
     Directory *entry = search_directory(this->image, actual_inode, directory_name);
     if (!entry || entry->file_type != 1) {
-        std::cout << "cat: arquivo não encontrado ou não é um arquivo regular." << std::endl;
+        cout << "cat: arquivo não encontrado ou não é um arquivo regular." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
-    unsigned int file_inode_block_group = block_group_from_inode(this->superblock, entry->inode);
-    BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(file_inode_block_group));
-    Inode *file_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, entry->inode));
+
+    // Descobre o grupo do inode do arquivo a ser lido
+    unsigned int file_inode_bgd = block_group_from_inode(this->superblock, entry->inode);
+    BlocksGroupDescriptor *file_bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(file_inode_bgd));
+    Inode *file_inode = read_inode(this->image, file_bgd, inode_relative_position(this->superblock, entry->inode));
+
     char buffer[BLOCK_SIZE + 1] = {0};
     for (int i = 0; i < 12 && file_inode->i_block[i] != 0; i++) {
         fseek(this->image, file_inode->i_block[i] * BLOCK_SIZE, SEEK_SET);
         fread(buffer, 1, BLOCK_SIZE, this->image);
         buffer[BLOCK_SIZE] = '\0';
-        std::cout << buffer;
+        cout << buffer;
     }
-    std::cout << std::endl;
-    free(file_inode);      // Libera memória alocada
-    free(bgd_of_inode);    // Libera memória alocada
-    free(actual_inode);    // Libera memória alocada
+    cout << endl;
+
+    free(file_inode);
+    free(file_bgd);
+    free(actual_inode);
+    free(bgd);
 }
 
 // Lista os arquivos e diretórios do diretório corrente
 // Percorre as entradas do diretório atual e imprime informações detalhadas de cada uma.
 void FileSystemManager::ls() {
-  /*
-    acessa a última entrada no vetor navigation (pilha que armazena o caminho percorrido). 
-  */
-  Directory actual_directory = this->navigation.at(this->navigation.size() - 1);
-
-  // lê o inode do diretório atual
-  Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
-
-  // lê todas as entradas do diretório (arquivos/subdiretórios)
-  vector<Directory> directories = read_directories(this->image, actual_inode);
-  print_directories(directories);
+    Directory actual_directory = this->navigation.back();
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    vector<Directory> directories = read_directories(this->image, actual_inode);
+    print_directories(directories);
+    free(actual_inode);
+    free(bgd);
 }
 
 // Retorna o caminho absoluto do diretório corrente
@@ -121,7 +144,7 @@ void FileSystemManager::ls() {
 string FileSystemManager::pwd() {
     if (this->navigation.size() == 1)
         return "/";
-    std::string path;
+    string path;
     for (size_t i = 1; i < this->navigation.size(); ++i) {
         path += "/";
         // Garante que o nome será lido corretamente, mesmo sem \0
@@ -144,52 +167,114 @@ void FileSystemManager::cd(const char *directory_name) {
         }
         return;
     }
+
     Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    // Descobre o grupo do inode do diretório atual
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
+
     Directory *entry = search_directory(this->image, actual_inode, directory_name);
     if (!entry || entry->file_type != 2) {
-        std::cout << "cd: diretório não encontrado." << std::endl;
+        cout << "cd: diretório não encontrado." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
+
     Directory new_dir;
     new_dir.inode = entry->inode;
-    strncpy(new_dir.name, directory_name, EXT2_NAME_LEN);
+    // Copia corretamente o nome do diretório (garantindo \0)
+    memset(new_dir.name, 0, EXT2_NAME_LEN);
+    strncpy(new_dir.name, entry->name, entry->name_len);
+    new_dir.name[entry->name_len] = '\0';
+
     this->navigation.push_back(new_dir);
+
     free(actual_inode);
+    free(bgd);
 }
 
 // Exibe os atributos de um arquivo ou diretório
 // Mostra informações do inode correspondente ao nome informado.
 void FileSystemManager::attr(const char *directory_name) {
+    // acessa o diretório atual
     Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
-    Directory *entry = search_directory(this->image, actual_inode, directory_name);
-    if (!entry) {
-        std::cout << "attr: arquivo ou diretório não encontrado." << std::endl;
+
+    // lê inode do diretório atual (usando o bgd correto)
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
+
+    // busca pela entrada do arquivo/diretório
+    Directory *directory = search_directory(this->image, actual_inode, directory_name);
+
+    if (!directory) {
+        cout << "attr: arquivo ou diretório não encontrado." << endl;
+        free(actual_inode);
+        free(bgd);
         return;
     }
-    unsigned int inode_block_group = block_group_from_inode(this->superblock, entry->inode);
-    BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_block_group));
-    Inode *node = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, entry->inode));
-    print_inode(node);
+
+    // calcula o grupo de blocos onde o inode do alvo está
+    unsigned int directory_inode_block_group = block_group_from_inode(this->superblock, directory->inode);
+
+    // carrega o bgd correspondente
+    BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(directory_inode_block_group));
+
+    // lê o inode do arquivo/diretório atual
+    Inode *directory_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, directory->inode));
+
+    // imprime atributos no formato desejado
+    string permission = get_i_mode_permissions(directory_inode->i_mode);
+
+    float size_kb = (float)directory_inode->i_size / 1024;
+    float size_mb = (float)directory_inode->i_size / (1024 * 1024);
+
+    cout << "permissions\t" << "uid\t" << "gid\t" << "size\t\t\t" << "modified on\t" << endl;
+    cout << permission << "\t" << (unsigned)directory_inode->i_uid << "\t";
+    cout << (unsigned)directory_inode->i_gid << "\t";
+
+    // exibe em bytes se pequeno
+    if (directory_inode->i_size < 1024)
+        cout << (unsigned)directory_inode->i_size << " bytes";
+    // exibe em KB para arquivos médios (1KB <= tamanho < 1MB)
+    else if (directory_inode->i_size < (1024 * 1024))
+        cout << fixed << setprecision(2) << size_kb << " KiB";
+    // exibe em MB para arquivos com tamanho maior que 1MB
+    else
+        cout << fixed << setprecision(2) << size_mb << " MiB";
+    cout << "\t\t";
+    print_time((unsigned)directory_inode->i_mtime);
+
+    free(directory_inode);
+    free(bgd_of_inode);
+    free(actual_inode);
+    free(bgd);
 }
 
 void FileSystemManager::cp(const char *source_path, const char *target_path) {
-    // Tamanho do bloco fixo conforme especificação
     const uint32_t block_size = BLOCK_SIZE;
     char block[BLOCK_SIZE];
 
     // 1. Localizar o arquivo na imagem EXT2 (diretório corrente)
     Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
     Directory *file_entry = search_directory(this->image, actual_inode, source_path);
 
-    if (!file_entry)
+    if (!file_entry) {
+        free(actual_inode);
+        free(bgd);
         throw new Error("cp: arquivo não encontrado.");
+    }
 
-    if (file_entry->file_type != 1)
+    if (file_entry->file_type != 1) {
+        free(actual_inode);
+        free(bgd);
         throw new Error("cp: não é um arquivo regular.");
+    }
 
     // 2. Ler o inode do arquivo
     unsigned int file_inode_block_group = block_group_from_inode(this->superblock, file_entry->inode);
@@ -197,7 +282,7 @@ void FileSystemManager::cp(const char *source_path, const char *target_path) {
     Inode *file_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, file_entry->inode));
 
     // 3. Determinar caminho de destino
-    std::string full_target = target_path;
+    string full_target = target_path;
     struct stat st;
     bool is_dir = false;
     if (stat(target_path, &st) == 0 && S_ISDIR(st.st_mode)) {
@@ -208,9 +293,14 @@ void FileSystemManager::cp(const char *source_path, const char *target_path) {
     }
 
     // 4. Abrir arquivo de destino para escrita
-    std::ofstream out(full_target, std::ios::binary);
-    if (!out.is_open())
+    ofstream out(full_target, ios::binary);
+    if (!out.is_open()) {
+        free(file_inode);
+        free(bgd_of_inode);
+        free(actual_inode);
+        free(bgd);
         throw new Error("cp: não foi possível criar o arquivo de destino.");
+    }
 
     uint32_t bytes_remaining = file_inode->i_size;
 
@@ -243,24 +333,34 @@ void FileSystemManager::cp(const char *source_path, const char *target_path) {
     }
 
     out.close();
-    std::cout << "Arquivo '" << source_path << "' copiado para '" << full_target << "' com sucesso." << std::endl;
+    cout << "Arquivo '" << source_path << "' copiado para '" << full_target << "' com sucesso." << endl;
+
+    free(file_inode);
+    free(bgd_of_inode);
+    free(actual_inode);
+    free(bgd);
 }
 
 // Cria um novo arquivo vazio no diretório atual
 void FileSystemManager::touch(const char *file_name) {
+    if (!is_valid_name(file_name)) {
+        cout << "touch: nome inválido para arquivo." << endl;
+        return;
+    }
     Directory actual_directory = this->navigation.back();
-    // Lê o inode do diretório atual uma única vez e reutiliza
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
     Directory *existing = search_directory(this->image, actual_inode, file_name);
     if (existing) {
-        std::cout << "touch: arquivo '" << file_name << "' já existe." << std::endl;
+        cout << "touch: arquivo '" << file_name << "' já existe." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
-    // Usa funções do bitmap-utils para manipular o bitmap de inodes
     uint8_t inode_bitmap[BLOCK_SIZE];
-    read_bitmap(this->image, this->bgd->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
+    read_bitmap(this->image, bgd->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
 
     uint32_t inode_count = this->superblock->s_inodes_count;
     uint32_t first_inode = 0;
@@ -272,19 +372,20 @@ void FileSystemManager::touch(const char *file_name) {
         }
     }
     if (first_inode == 0) {
-        std::cout << "touch: não há inodes livres." << std::endl;
+        cout << "touch: não há inodes livres." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
-    write_bitmap(this->image, this->bgd->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
+    write_bitmap(this->image, bgd->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
 
     this->superblock->s_free_inodes_count--;
     fseek(this->image, 1024, SEEK_SET);
     fwrite(this->superblock, sizeof(Superblock), 1, this->image);
 
-    this->bgd->bg_free_inodes_count--;
-    fseek(this->image, block_group_descriptor_address(0), SEEK_SET);
-    fwrite(this->bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
+    bgd->bg_free_inodes_count--;
+    fseek(this->image, block_group_descriptor_address(inode_bgd), SEEK_SET);
+    fwrite(bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
 
     Inode new_inode = {};
     new_inode.i_mode = 0x81A4; // arquivo regular, permissão 644
@@ -295,13 +396,12 @@ void FileSystemManager::touch(const char *file_name) {
     new_inode.i_blocks = 0;
     new_inode.i_atime = new_inode.i_ctime = new_inode.i_mtime = time(nullptr);
 
-    uint32_t inode_table_block = this->bgd->bg_inode_table;
+    uint32_t inode_table_block = bgd->bg_inode_table;
     uint32_t inode_size = this->superblock->s_inode_size;
     uint32_t inode_offset = inode_table_block * BLOCK_SIZE + (first_inode - 1) * inode_size;
     fseek(this->image, inode_offset, SEEK_SET);
     fwrite(&new_inode, inode_size, 1, this->image);
 
-    // Lê o bloco de diretório uma única vez e reutiliza
     uint32_t dir_block = actual_inode->i_block[0];
     uint8_t buffer[BLOCK_SIZE];
     fseek(this->image, dir_block * BLOCK_SIZE, SEEK_SET);
@@ -326,34 +426,40 @@ void FileSystemManager::touch(const char *file_name) {
             fseek(this->image, dir_block * BLOCK_SIZE, SEEK_SET);
             fwrite(buffer, 1, BLOCK_SIZE, this->image);
 
-            std::cout << "touch: arquivo '" << file_name << "' criado." << std::endl;
+            cout << "touch: arquivo '" << file_name << "' criado." << endl;
             free(actual_inode);
+            free(bgd);
             return;
         }
         offset += entry->rec_len;
     }
-    std::cout << "touch: não há espaço no diretório para criar o arquivo." << std::endl;
+    cout << "touch: não há espaço no diretório para criar o arquivo." << endl;
     free(actual_inode);
+    free(bgd);
 }
 
 // Remove um arquivo do diretório atual
 void FileSystemManager::rm(const char *file_name) {
     Directory actual_directory = this->navigation.back();
-    // Lê o inode do diretório atual uma única vez e reutiliza
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    // Busca o descritor de grupo correto para o diretório atual
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
     Directory *entry = search_directory(this->image, actual_inode, file_name);
     if (!entry) {
-        std::cout << "rm: arquivo '" << file_name << "' não encontrado." << std::endl;
+        cout << "rm: arquivo '" << file_name << "' não encontrado." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
     if (entry->file_type != 1) {
-        std::cout << "rm: '" << file_name << "' não é um arquivo regular." << std::endl;
+        cout << "rm: '" << file_name << "' não é um arquivo regular." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
-    // Lê o inode do arquivo a ser removido uma única vez e reutiliza
+    // Lê o inode do arquivo a ser removido e o descritor de grupo correto
     unsigned int file_inode_block_group = block_group_from_inode(this->superblock, entry->inode);
     BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(file_inode_block_group));
     Inode *file_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, entry->inode));
@@ -383,58 +489,72 @@ void FileSystemManager::rm(const char *file_name) {
     fseek(this->image, dir_block * BLOCK_SIZE, SEEK_SET);
     fwrite(buffer, 1, BLOCK_SIZE, this->image);
 
-    // Libera o inode no bitmap de inodes usando bitmap-utils
+    // Libera o inode no bitmap de inodes usando o bgd correto
     uint8_t inode_bitmap[BLOCK_SIZE];
-    read_bitmap(this->image, this->bgd->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
+    read_bitmap(this->image, bgd_of_inode->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
     uint32_t inode_idx = entry->inode - 1;
     clear_bitmap_bit(inode_bitmap, inode_idx);
-    write_bitmap(this->image, this->bgd->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
+    write_bitmap(this->image, bgd_of_inode->bg_inode_bitmap, inode_bitmap, BLOCK_SIZE);
 
     this->superblock->s_free_inodes_count++;
     fseek(this->image, 1024, SEEK_SET);
     fwrite(this->superblock, sizeof(Superblock), 1, this->image);
 
-    this->bgd->bg_free_inodes_count++;
-    fseek(this->image, block_group_descriptor_address(0), SEEK_SET);
-    fwrite(this->bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
+    bgd_of_inode->bg_free_inodes_count++;
+    fseek(this->image, block_group_descriptor_address(file_inode_block_group), SEEK_SET);
+    fwrite(bgd_of_inode, sizeof(BlocksGroupDescriptor), 1, this->image);
 
     // Libera blocos de dados do arquivo usando bitmap-utils
     uint8_t block_bitmap[BLOCK_SIZE];
-    read_bitmap(this->image, this->bgd->bg_block_bitmap, block_bitmap, BLOCK_SIZE);
+    read_bitmap(this->image, bgd_of_inode->bg_block_bitmap, block_bitmap, BLOCK_SIZE);
     for (int i = 0; i < 12; i++) {
         if (file_inode->i_block[i] != 0) {
             uint32_t block_idx = file_inode->i_block[i] - 1;
             clear_bitmap_bit(block_bitmap, block_idx);
         }
     }
-    write_bitmap(this->image, this->bgd->bg_block_bitmap, block_bitmap, BLOCK_SIZE);
+    write_bitmap(this->image, bgd_of_inode->bg_block_bitmap, block_bitmap, BLOCK_SIZE);
 
-    std::cout << "rm: arquivo '" << file_name << "' removido." << std::endl;
+    cout << "rm: arquivo '" << file_name << "' removido." << endl;
     free(file_inode);
     free(bgd_of_inode);
     free(actual_inode);
+    free(bgd);
 }
 
 // Renomeia um arquivo ou diretório no diretório atual
 void FileSystemManager::rename(const char *old_name, const char *new_name) {
+    if (!is_valid_name(new_name)) {
+        cout << "rename: nome inválido para arquivo ou diretório." << endl;
+        return;
+    }
+    // Impede renomear . ou ..
+    if (strcmp(old_name, ".") == 0 || strcmp(old_name, "..") == 0) {
+        cout << "rename: não é permitido renomear '" << old_name << "'." << endl;
+        return;
+    }
     // Obtém o diretório atual
     Directory actual_directory = this->navigation.back();
-    // Lê o inode do diretório atual
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    // Busca o descritor de grupo correto para o diretório atual
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
     // Procura a entrada do arquivo/diretório a ser renomeado
     Directory *entry = search_directory(this->image, actual_inode, old_name);
     if (!entry) {
-        std::cout << "rename: '" << old_name << "' não encontrado." << std::endl;
+        cout << "rename: '" << old_name << "' não encontrado." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
     // Verifica se já existe uma entrada com o novo nome
     Directory *conflict = search_directory(this->image, actual_inode, new_name);
     if (conflict) {
-        std::cout << "rename: já existe um arquivo ou diretório com o nome '" << new_name << "'." << std::endl;
+        cout << "rename: já existe um arquivo ou diretório com o nome '" << new_name << "'." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
@@ -461,23 +581,30 @@ void FileSystemManager::rename(const char *old_name, const char *new_name) {
     fseek(this->image, dir_block * BLOCK_SIZE, SEEK_SET);
     fwrite(buffer, 1, BLOCK_SIZE, this->image);
 
-    std::cout << "rename: '" << old_name << "' renomeado para '" << new_name << "'." << std::endl;
+    cout << "rename: '" << old_name << "' renomeado para '" << new_name << "'." << endl;
     free(actual_inode);
-
+    free(bgd);
 }
 
 // Cria um novo diretório no diretório atual
 void FileSystemManager::mkdir(const char *dir_name) {
+    if (!is_valid_name(dir_name)) {
+        cout << "mkdir: nome inválido para diretório." << endl;
+        return;
+    }
     // Obtém o diretório atual
-
     Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    // Busca o descritor de grupo correto para o diretório atual
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
     // Verifica se já existe um diretório com esse nome
     Directory *existing = search_directory(this->image, actual_inode, dir_name);
     if (existing) {
-        std::cout << "mkdir: diretório '" << dir_name << "' já existe." << std::endl;
+        cout << "mkdir: diretório '" << dir_name << "' já existe." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
@@ -485,7 +612,7 @@ void FileSystemManager::mkdir(const char *dir_name) {
     uint32_t inode_count = this->superblock->s_inodes_count;
     uint32_t first_inode = 0;
     uint8_t buffer[BLOCK_SIZE];
-    read_bitmap(this->image, this->bgd->bg_inode_bitmap, buffer, BLOCK_SIZE);
+    read_bitmap(this->image, bgd->bg_inode_bitmap, buffer, BLOCK_SIZE);
 
     for (uint32_t i = 0; i < inode_count; i++) {
         if (!is_bitmap_bit_set(buffer, i)) {
@@ -495,26 +622,27 @@ void FileSystemManager::mkdir(const char *dir_name) {
         }
     }
     if (first_inode == 0) {
-        std::cout << "mkdir: não há inodes livres." << std::endl;
+        cout << "mkdir: não há inodes livres." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
-    write_bitmap(this->image, this->bgd->bg_inode_bitmap, buffer, BLOCK_SIZE);
+    write_bitmap(this->image, bgd->bg_inode_bitmap, buffer, BLOCK_SIZE);
 
     // Atualiza superbloco e bgd
     this->superblock->s_free_inodes_count--;
     fseek(this->image, 1024, SEEK_SET);
     fwrite(this->superblock, sizeof(Superblock), 1, this->image);
 
-    this->bgd->bg_free_inodes_count--;
-    fseek(this->image, block_group_descriptor_address(0), SEEK_SET);
-    fwrite(this->bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
+    bgd->bg_free_inodes_count--;
+    fseek(this->image, block_group_descriptor_address(inode_bgd), SEEK_SET);
+    fwrite(bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
 
     // Procura um bloco livre para o novo diretório
     uint32_t block_count = this->superblock->s_blocks_count;
     uint32_t first_block = 0;
-    read_bitmap(this->image, this->bgd->bg_block_bitmap, buffer, BLOCK_SIZE);
+    read_bitmap(this->image, bgd->bg_block_bitmap, buffer, BLOCK_SIZE);
 
     for (uint32_t i = 0; i < block_count; i++) {
         if (!is_bitmap_bit_set(buffer, i)) {
@@ -524,21 +652,22 @@ void FileSystemManager::mkdir(const char *dir_name) {
         }
     }
     if (first_block == 0) {
-        std::cout << "mkdir: não há blocos livres." << std::endl;
+        cout << "mkdir: não há blocos livres." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
-    write_bitmap(this->image, this->bgd->bg_block_bitmap, buffer, BLOCK_SIZE);
+    write_bitmap(this->image, bgd->bg_block_bitmap, buffer, BLOCK_SIZE);
 
     // Atualiza superbloco e bgd para blocos
     this->superblock->s_free_blocks_count--;
     fseek(this->image, 1024, SEEK_SET);
     fwrite(this->superblock, sizeof(Superblock), 1, this->image);
 
-    this->bgd->bg_free_blocks_count--;
-    fseek(this->image, block_group_descriptor_address(0), SEEK_SET);
-    fwrite(this->bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
+    bgd->bg_free_blocks_count--;
+    fseek(this->image, block_group_descriptor_address(inode_bgd), SEEK_SET);
+    fwrite(bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
 
     // Inicializa o novo inode como diretório
     Inode new_inode = {};
@@ -553,7 +682,7 @@ void FileSystemManager::mkdir(const char *dir_name) {
     for (int i = 1; i < 15; i++) new_inode.i_block[i] = 0;
 
     // Escreve o novo inode na tabela de inodes
-    uint32_t inode_table_block = this->bgd->bg_inode_table;
+    uint32_t inode_table_block = bgd->bg_inode_table;
     uint32_t inode_size = this->superblock->s_inode_size;
     uint32_t inode_offset = inode_table_block * BLOCK_SIZE + (first_inode - 1) * inode_size;
     fseek(this->image, inode_offset, SEEK_SET);
@@ -603,36 +732,48 @@ void FileSystemManager::mkdir(const char *dir_name) {
             fseek(this->image, parent_block * BLOCK_SIZE, SEEK_SET);
             fwrite(buffer, 1, BLOCK_SIZE, this->image);
 
-            std::cout << "mkdir: diretório '" << dir_name << "' criado." << std::endl;
+            cout << "mkdir: diretório '" << dir_name << "' criado." << endl;
             free(actual_inode);
+            free(bgd);
             return;
         }
         offset += entry->rec_len;
     }
 
-    std::cout << "mkdir: não há espaço no diretório para criar o diretório." << std::endl;
+    cout << "mkdir: não há espaço no diretório para criar o diretório." << endl;
     free(actual_inode);
+    free(bgd);
 }
 
 void FileSystemManager::rmdir(const char *dir_name) {
+    // Impede remoção de "." e ".."
+    if (strcmp(dir_name, ".") == 0 || strcmp(dir_name, "..") == 0) {
+        cout << "rmdir: não é permitido remover '" << dir_name << "'." << endl;
+        return;
+    }
     // Obtém o diretório atual
     Directory actual_directory = this->navigation.back();
-    Inode *actual_inode = read_inode(this->image, this->bgd, inode_relative_position(this->superblock, actual_directory.inode));
+    // Busca o descritor de grupo correto para o diretório atual
+    unsigned int inode_bgd = block_group_from_inode(this->superblock, actual_directory.inode);
+    BlocksGroupDescriptor *bgd = read_blocks_group_descriptor(this->image, block_group_descriptor_address(inode_bgd));
+    Inode *actual_inode = read_inode(this->image, bgd, inode_relative_position(this->superblock, actual_directory.inode));
 
     // Procura a entrada do diretório a ser removido
     Directory *entry = search_directory(this->image, actual_inode, dir_name);
     if (!entry) {
-        std::cout << "rmdir: diretório '" << dir_name << "' não encontrado." << std::endl;
+        cout << "rmdir: diretório '" << dir_name << "' não encontrado." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
     if (entry->file_type != 2) {
-        std::cout << "rmdir: '" << dir_name << "' não é um diretório." << std::endl;
+        cout << "rmdir: '" << dir_name << "' não é um diretório." << endl;
         free(actual_inode);
+        free(bgd);
         return;
     }
 
-    // Lê o inode do diretório a ser removido
+    // Lê o inode do diretório a ser removido e seu descritor de grupo correto
     unsigned int dir_inode_block_group = block_group_from_inode(this->superblock, entry->inode);
     BlocksGroupDescriptor *bgd_of_inode = read_blocks_group_descriptor(this->image, block_group_descriptor_address(dir_inode_block_group));
     Inode *dir_inode = read_inode(this->image, bgd_of_inode, inode_relative_position(this->superblock, entry->inode));
@@ -656,10 +797,11 @@ void FileSystemManager::rmdir(const char *dir_name) {
         offset += curr_entry->rec_len;
     }
     if (entries > 0) {
-        std::cout << "rmdir: diretório '" << dir_name << "' não está vazio." << std::endl;
+        cout << "rmdir: diretório '" << dir_name << "' não está vazio." << endl;
         free(dir_inode);
         free(bgd_of_inode);
         free(actual_inode);
+        free(bgd);
         return;
     }
 
@@ -691,38 +833,40 @@ void FileSystemManager::rmdir(const char *dir_name) {
     fseek(this->image, parent_block * BLOCK_SIZE, SEEK_SET);
     fwrite(buffer, 1, BLOCK_SIZE, this->image);
 
-    // Libera o inode no bitmap de inodes
-    read_bitmap(this->image, this->bgd->bg_inode_bitmap, buffer, BLOCK_SIZE);
+    // Libera o inode no bitmap de inodes do grupo correto
+    read_bitmap(this->image, bgd_of_inode->bg_inode_bitmap, buffer, BLOCK_SIZE);
     uint32_t inode_idx = entry->inode - 1;
     clear_bitmap_bit(buffer, inode_idx);
-    write_bitmap(this->image, this->bgd->bg_inode_bitmap, buffer, BLOCK_SIZE);
+    write_bitmap(this->image, bgd_of_inode->bg_inode_bitmap, buffer, BLOCK_SIZE);
 
     // Atualiza contadores de inodes livres
     this->superblock->s_free_inodes_count++;
     fseek(this->image, 1024, SEEK_SET);
     fwrite(this->superblock, sizeof(Superblock), 1, this->image);
 
-    this->bgd->bg_free_inodes_count++;
-    fseek(this->image, block_group_descriptor_address(0), SEEK_SET);
-    fwrite(this->bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
+    bgd_of_inode->bg_free_inodes_count++;
+    fseek(this->image, block_group_descriptor_address(dir_inode_block_group), SEEK_SET);
+    fwrite(bgd_of_inode, sizeof(BlocksGroupDescriptor), 1, this->image);
 
-    // Libera o bloco do diretório no bitmap de blocos
-    read_bitmap(this->image, this->bgd->bg_block_bitmap, buffer, BLOCK_SIZE);
+    // Libera o bloco do diretório no bitmap de blocos do grupo correto
+    read_bitmap(this->image, bgd_of_inode->bg_block_bitmap, buffer, BLOCK_SIZE);
     uint32_t block_idx = dir_inode->i_block[0] - 1;
     clear_bitmap_bit(buffer, block_idx);
-    write_bitmap(this->image, this->bgd->bg_block_bitmap, buffer, BLOCK_SIZE);
+    write_bitmap(this->image, bgd_of_inode->bg_block_bitmap, buffer, BLOCK_SIZE);
 
     // Atualiza contadores de blocos livres
     this->superblock->s_free_blocks_count++;
     fseek(this->image, 1024, SEEK_SET);
     fwrite(this->superblock, sizeof(Superblock), 1, this->image);
 
-    this->bgd->bg_free_blocks_count++;
-    fseek(this->image, block_group_descriptor_address(0), SEEK_SET);
-    fwrite(this->bgd, sizeof(BlocksGroupDescriptor), 1, this->image);
+    bgd_of_inode->bg_free_blocks_count++;
+    fseek(this->image, block_group_descriptor_address(dir_inode_block_group), SEEK_SET);
+    fwrite(bgd_of_inode, sizeof(BlocksGroupDescriptor), 1, this->image);
 
-    std::cout << "rmdir: diretório '" << dir_name << "' removido." << std::endl;
+    cout << "rmdir: diretório '" << dir_name << "' removido." << endl;
     free(dir_inode);
     free(bgd_of_inode);
     free(actual_inode);
+    free(bgd);
 }
+
