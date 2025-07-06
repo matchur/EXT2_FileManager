@@ -8,35 +8,43 @@
 
 typedef char Block[BLOCK_SIZE];
 
-// Lê e retorna todas as entradas de diretório contidas em um inode de diretório
 vector<Directory> read_directories(FILE* image, Inode* inode) {
     vector<Directory> directories;
 
-    if(S_ISDIR(inode->i_mode)) {
-        for(int i = 0; i < 12; i++){
-            Block* block = (Block*)malloc(sizeof(Block));
-            if(!inode->i_block[i]) {
-                free(block);
+    if (S_ISDIR(inode->i_mode)) {
+        for (int i = 0; i < 12; i++) {
+            if (!inode->i_block[i])
                 break;
-            }
 
-            // Use a função mais explícita para offset, se disponível
+            uint8_t block[BLOCK_SIZE];
             fseek(image, BLOCK_OFFSET(inode->i_block[i]), SEEK_SET);
-            fread(block, 1, sizeof(Block), image);
+            fread(block, 1, BLOCK_SIZE, image);
 
-            Directory* worked_directory = (Directory *) block;
-            int block_position = 0;
-            // Processa cada entrada de diretório no bloco
-            do{
+            uint32_t offset = 0;
+            while (offset < BLOCK_SIZE) {
+                Directory* entry = (Directory*)(block + offset);
+                if (entry->inode == 0 || entry->rec_len == 0)
+                    break; // Fim das entradas válidas
+
+                if (entry->inode == 0) {
+                    offset += entry->rec_len;
+                    continue; // Pula entradas removidas, mas continua lendo o bloco
+                }
                 Directory directory;
-                memcpy(&directory, worked_directory, sizeof(Directory));
-                directory.name[directory.name_len] = '\0';
-                directories.push_back(directory);
-                block_position += worked_directory->rec_len;
-                worked_directory = (Directory *) ((char*) worked_directory + worked_directory->rec_len);
-            }while((block_position < inode->i_size) && worked_directory->inode);
+                memcpy(&directory, entry, sizeof(Directory));
+                // Garante que o nome será terminado por \0
+                if (directory.name_len < EXT2_NAME_LEN)
+                    directory.name[directory.name_len] = '\0';
+                else
+                    directory.name[EXT2_NAME_LEN - 1] = '\0';
 
-            free(block);
+                directories.push_back(directory);
+                
+
+                offset += entry->rec_len;
+                if (entry->rec_len == 0)
+                    break; // Segurança extra
+            }
         }
     }
 
@@ -44,32 +52,28 @@ vector<Directory> read_directories(FILE* image, Inode* inode) {
 }
 
 // Procura uma entrada de diretório pelo nome e retorna um ponteiro para uma cópia local (válida enquanto o vetor existir)
-Directory* search_directory(FILE* image, Inode* inode, const char* name){
-    Directory* directory = NULL;
-    // O vetor directories é local, então o ponteiro retornado só é válido dentro deste escopo!
+Directory* search_directory(FILE* image, Inode* inode, const char* name) {
     static Directory found; // static para garantir validade após retorno (não é thread-safe)
     vector<Directory> directories = read_directories(image, inode);
 
-    for(vector<Directory>::iterator it = directories.begin(); it != directories.end(); it++){
-        const char* iterator_directory_name = (const char*) (*it).name;
-        if(!strcmp(name, iterator_directory_name)){
-            found = *it;
-            directory = &found;
-            break;
+    size_t name_len = strlen(name);
+    for (auto& dir : directories) {
+        // Compare exatamente name_len e dir.name_len
+        if (dir.name_len == name_len && strncmp(name, dir.name, name_len) == 0) {
+            found = dir;
+            return &found;
         }
-
     }
-
-    return directory;
+    return nullptr;
 }
 
 // Imprime informações de uma entrada de diretório
 void print_directory(Directory directory){
     cout <<  directory.name << endl;
     cout << "inode:\t\t\t" << (unsigned) directory.inode << endl;
-    cout << "record lenght:\t\t" << (unsigned) directory.rec_len << endl;
-    cout << "name lenght:\t\t" << (unsigned) directory.name_len << endl;
-    cout << "file type:\t\t" << (unsigned) directory.file_type << endl;
+    cout << "tamanho do registro:\t" << (unsigned) directory.rec_len << endl;
+    cout << "tamanho do nome:\t" << (unsigned) directory.name_len << endl;
+    cout << "tipo do arquivo:\t" << (unsigned) directory.file_type << endl;
 }
 
 // Imprime todas as entradas de um vetor de diretórios
