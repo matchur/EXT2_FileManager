@@ -64,7 +64,13 @@ void shell(FileSystemManager *fsm)
         int prox = argumento.find(" ") + 1;
         string segundo_argumento = argumento.substr(prox, argumento.length() - prox);
 
-        if (!strcmp(primeiro_argumento.c_str(), "superblock"))
+        if (!strcmp(primeiro_argumento.c_str(), "inode"))
+        {
+          int inode = stoi(segundo_argumento);
+          fsm->inode_info(inode);
+        }
+
+        else if (!strcmp(primeiro_argumento.c_str(), "superblock"))
         {
           fsm->superblock_info();
         }
@@ -84,12 +90,6 @@ void shell(FileSystemManager *fsm)
           int bgd_index = stoi(segundo_argumento);
           cout << "Descritor do Grupo de Blocos " << bgd_index << ":" << endl;
           fsm->blocks_group_descriptor_info(bgd_index);
-        }
-
-        if (!strcmp(primeiro_argumento.c_str(), "inode"))
-        {
-          int inode = stoi(segundo_argumento);
-          fsm->inode_info(inode);
         }
 
         else
