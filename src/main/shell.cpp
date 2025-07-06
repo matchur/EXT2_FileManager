@@ -2,139 +2,143 @@
 #include "../error/error.hpp"
 #include <cstring>
 
-using namespace std;
+using std::cout;
+using std::endl;
 
 void shell(FileSystemManager *fsm)
 {
-  std::string input, operation, argument;
+  string input, operacao, argumento;
 
   while (1)
   {
     try
     {
       // Mostra o diretório atual no prompt
-      std::string pwd = fsm->pwd();
+      string pwd = fsm->pwd();
       if (pwd.size() > 1 && pwd.back() == '/')
         pwd.pop_back();
-      std::cout << "(" << pwd << ")> ";
+      cout << "[ " << pwd << " ]> ";
 
-      std::getline(std::cin, input);
+      getline(cin, input);
 
-      std::cout << std::endl;
+      cout << endl;
 
       // Extrai a primeira palavra da entrada (antes do primeiro espaço)
-      operation = input.substr(0, input.find(" "));
+      operacao = input.substr(0, input.find(" "));
 
-      //Se houver espaço na entrada, assume que há um argumento
-      bool has_argument = (input.find(" ") != std::string::npos);
+      // Se houver espaço na entrada, assume que há um argumento
+      bool tem_argumento = (input.find(" ") != string::npos);
       int pos = input.find(" ") + 1; // Calcula a posição de início do argumento.
-      argument = input.substr(pos, input.length() - pos); // Extrai o argumento completo após o comando.
+      argumento = input.substr(pos, input.length() - pos); // Extrai o argumento completo após o comando.
 
-      if (!std::strcmp(operation.c_str(), "info")){
+      if (!strcmp(operacao.c_str(), "info")){
         fsm->info();
       }
 
-      else if (!std::strcmp(operation.c_str(), "cd")){
-        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
-        fsm->cd(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "cd")){
+        if(argumento.size() == 0 || !tem_argumento)  throw new Error("sintaxe inválida.");
+        fsm->cd(argumento.c_str());
       }
 
-      else if (!std::strcmp(operation.c_str(), "cat")){
-        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
-        fsm->cat(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "cat")){
+        if(argumento.size() == 0 || !tem_argumento)  throw new Error("sintaxe inválida.");
+        fsm->cat(argumento.c_str());
       }
 
-      else if (!std::strcmp(operation.c_str(), "ls")) {
+      else if (!strcmp(operacao.c_str(), "ls")) {
         fsm->ls();
       }
-
-      else if (!std::strcmp(operation.c_str(), "attr"))
-      {
-        if(argument.size() == 0 || !has_argument)  throw new Error("invalid syntax.");
-        fsm->attr(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "pwd")) {
+        cout << fsm->pwd() << endl;
       }
 
-      else if (!std::strcmp(operation.c_str(), "print"))
+      else if (!strcmp(operacao.c_str(), "attr"))
       {
-        std::string first_argument = argument.substr(0, argument.find(" "));
-        int prox = argument.find(" ") + 1;
-        std::string second_argument = argument.substr(prox, argument.length() - prox);
+        if(argumento.size() == 0 || !tem_argumento)  throw new Error("sintaxe inválida.");
+        fsm->attr(argumento.c_str());
+      }
 
-        if (!std::strcmp(first_argument.c_str(), "superblock"))
+      else if (!strcmp(operacao.c_str(), "print"))
+      {
+        string primeiro_argumento = argumento.substr(0, argumento.find(" "));
+        int prox = argumento.find(" ") + 1;
+        string segundo_argumento = argumento.substr(prox, argumento.length() - prox);
+
+        if (!strcmp(primeiro_argumento.c_str(), "superblock"))
         {
           fsm->superblock_info();
         }
 
-        else if (!std::strcmp(first_argument.c_str(), "groups"))
+        else if (!strcmp(primeiro_argumento.c_str(), "groups"))
         {
           for (int i = 0; i < 8; i++)
           {
-            cout << "Block Group Descriptor " << i << ":" << endl;
+            cout << "Descritor do Grupo de Blocos " << i << ":" << endl;
             fsm->blocks_group_descriptor_info(i);
             cout << endl;
           }
         }
 
-        else if (!std::strcmp(first_argument.c_str(), "group"))
+        else if (!strcmp(primeiro_argumento.c_str(), "group"))
         {
-          int bgd_index = std::stoi(second_argument);
-          cout << "Block Group Descriptor " << bgd_index << ":" << endl;
+          int bgd_index = stoi(segundo_argumento);
+          cout << "Descritor do Grupo de Blocos " << bgd_index << ":" << endl;
           fsm->blocks_group_descriptor_info(bgd_index);
         }
 
-        if (!std::strcmp(first_argument.c_str(), "inode"))
+        if (!strcmp(primeiro_argumento.c_str(), "inode"))
         {
-          int inode = std::stoi(second_argument);
+          int inode = stoi(segundo_argumento);
           fsm->inode_info(inode);
         }
 
         else
-          throw new Error("invalid syntax.");
+          throw new Error("sintaxe inválida.");
       }
 
-      else if (!std::strcmp(operation.c_str(), "cp")) {
-        std::string first_argument = argument.substr(0, argument.find(" "));
-        int prox = argument.find(" ") + 1;
-        std::string second_argument = argument.substr(prox, argument.length() - prox);
-        if(first_argument.empty() || second_argument.empty())
-            throw new Error("invalid syntax.");
-        fsm->cp(first_argument.c_str(), second_argument.c_str());
+      else if (!strcmp(operacao.c_str(), "cp")) {
+        string primeiro_argumento = argumento.substr(0, argumento.find(" "));
+        int prox = argumento.find(" ") + 1;
+        string segundo_argumento = argumento.substr(prox, argumento.length() - prox);
+        if(primeiro_argumento.empty() || segundo_argumento.empty())
+            throw new Error("sintaxe inválida.");
+        fsm->cp(primeiro_argumento.c_str(), segundo_argumento.c_str());
       }
       
-      else if (!std::strcmp(operation.c_str(), "touch")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
-        fsm->touch(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "touch")) {
+        if(argumento.size() == 0 || !tem_argumento) throw new Error("sintaxe inválida.");
+        fsm->touch(argumento.c_str());
       }
-      else if (!std::strcmp(operation.c_str(), "rm")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
-        fsm->rm(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "rm")) {
+        if(argumento.size() == 0 || !tem_argumento) throw new Error("sintaxe inválida.");
+        fsm->rm(argumento.c_str());
       }
-      else if (!std::strcmp(operation.c_str(), "rename")) {
-        std::string first_argument = argument.substr(0, argument.find(" "));
-        int prox = argument.find(" ") + 1;
-        std::string second_argument = argument.substr(prox, argument.length() - prox);
-        if(first_argument.empty() || second_argument.empty())
-            throw new Error("invalid syntax.");
-        fsm->rename(first_argument.c_str(), second_argument.c_str());
+      else if (!strcmp(operacao.c_str(), "rename")) {
+        string primeiro_argumento = argumento.substr(0, argumento.find(" "));
+        int prox = argumento.find(" ") + 1;
+        string segundo_argumento = argumento.substr(prox, argumento.length() - prox);
+        if(primeiro_argumento.empty() || segundo_argumento.empty())
+            throw new Error("sintaxe inválida.");
+        fsm->rename(primeiro_argumento.c_str(), segundo_argumento.c_str());
       }
-      else if (!std::strcmp(operation.c_str(), "mkdir")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
-        fsm->mkdir(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "mkdir")) {
+        if(argumento.size() == 0 || !tem_argumento) throw new Error("sintaxe inválida.");
+        fsm->mkdir(argumento.c_str());
       }
-      else if (!std::strcmp(operation.c_str(), "rmdir")) {
-        if(argument.size() == 0 || !has_argument) throw new Error("invalid syntax.");
-        fsm->rmdir(argument.c_str());
+      else if (!strcmp(operacao.c_str(), "rmdir")) {
+        if(argumento.size() == 0 || !tem_argumento) throw new Error("sintaxe inválida.");
+        fsm->rmdir(argumento.c_str());
       }
-      else if (!std::strcmp(operation.c_str(), "exit"))
+      else if (!strcmp(operacao.c_str(), "exit"))
         exit(0);
 
       else
-        throw new Error("command not found");
+        throw new Error("comando não encontrado");
     }
-    catch (Error *error)
+    catch (Error *erro)
     {
-      std::cout << error->message << endl;
-      delete error;
+      cout << erro->message << endl;
+      delete erro;
     }
   }
 }

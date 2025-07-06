@@ -8,17 +8,17 @@ using namespace std;
 void print_array(uint32_t *array, int size)
 {
   for (int i = 0; i < size; i++)
-    cout << "pointer[" << i << "]:  " << array[i] << endl;
+    cout << "ponteiro[" << i << "]:  " << array[i] << endl;
 }
 
 void print_inode(Inode *inode) {
-    cout << "file format and access rights:  " << "0x" << std::hex << (unsigned)inode->i_mode << std::dec << endl;
+    cout << "file format and access rights:  " << "0x" << hex << (unsigned)inode->i_mode << dec << endl;
     cout << "user_id:  " << (unsigned)inode->i_uid << endl;
     cout << "lower 32-bit file size:  " << (unsigned)inode->i_size << endl;
-    cout << "access time:   " << (unsigned)inode->i_atime << endl;
-    cout << "creation time:  " << (unsigned)inode->i_ctime << endl;
-    cout << "modification time:  " << (unsigned)inode->i_mtime << endl;
-    cout << "deletion time:  " << (unsigned)inode->i_dtime << endl;
+    cout << "access time:   "; print_time((unsigned)inode->i_atime);
+    cout << "creation time:  "; print_time((unsigned)inode->i_ctime);
+    cout << "modification time:  "; print_time((unsigned)inode->i_mtime);
+    cout << "deletion time:  "; print_time((unsigned)inode->i_dtime);
     cout << "group id:  " << (unsigned)inode->i_gid << endl;
     cout << "link count inode:  " << (unsigned)inode->i_links_count << endl;
     cout << "512-bytes blocks:  " << (unsigned)inode->i_blocks << endl;
@@ -29,7 +29,7 @@ void print_inode(Inode *inode) {
     cout << "block number extended attributes:  " << (unsigned)inode->i_file_acl << endl;
     cout << "higher 32-bit file size:  " << (unsigned)inode->i_dir_acl << endl;
     cout << "location file fragment:  " << (unsigned)inode->i_faddr << endl;
-  }
+}
 
 Inode *read_inode(FILE *image, BlocksGroupDescriptor *bgd, unsigned int inode_relative_position) {
   Inode *inode = (Inode *)malloc(sizeof(Inode)); //aloca memória para um Inode
@@ -173,7 +173,7 @@ string get_i_mode_permissions(uint32_t i_mode) {
   else
     str = str.append("-"); // outro tipo
 
-  // Permissões do user
+  // Permissões do usuário
   str += (i_mode & 0x0100) ? "r" : "-";
   str += (i_mode & 0x0080) ? "w" : "-";
   str += (i_mode & 0x0040) ? "x" : "-";

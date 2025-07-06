@@ -12,7 +12,6 @@ image-restore:
 
 clear:
 	rm -rf *.o
-	rm -rf *.exe
 
 mount:
 	sudo mount EXT2_TESTE.img /mnt
